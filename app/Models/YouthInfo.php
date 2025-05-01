@@ -53,9 +53,9 @@ class YouthInfo extends Model
 
 
 
-    public function user()
+    public function yUser()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(YouthUser::class);
     }
 }
 

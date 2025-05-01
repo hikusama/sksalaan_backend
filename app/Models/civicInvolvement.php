@@ -18,6 +18,10 @@ class civicInvolvement extends Model
         'end',
         'yearGraduated',
     ];
+
+    public function yuser()  {
+        return $this->belongsTo(YouthUser::class);
+    }
 }
 
 /*

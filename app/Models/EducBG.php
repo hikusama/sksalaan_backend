@@ -17,6 +17,11 @@ class EducBG extends Model
         'periodOfAttendance',
         'yearGraduate',
     ];
+
+
+    public function yUser(){
+        return $this->belongsTo(YouthUser::class);
+    }
 }
 /*	
 	-level
