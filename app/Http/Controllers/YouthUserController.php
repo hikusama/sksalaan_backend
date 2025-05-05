@@ -70,12 +70,16 @@ class YouthUserController extends Controller
         }
     }
 
+    private function validateYouthStep1(Request $request){
+
+    }
     private function validateYouthInfo(Request $request)
     {
         return $request->validate([
             'fname' => 'required',
             'mname' => 'required',
             'lname' => 'required',
+            'age' => 'required',
             'address' => 'required',
             'dateOfBirth' => 'required|date_format:Y-m-d',
             'placeOfBirth' => 'required',

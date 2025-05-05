@@ -21,11 +21,11 @@ class YouthUser extends Model
     }
     public function educbg()
     {
-        return $this->hasOne(EducBG::class);
+        return $this->hasMany(EducBG::class);
     }
     public function civicInvolvement()
     {
-        return $this->hasOne(civicInvolvement::class);
+        return $this->hasMany(civicInvolvement::class);
     }
 }
 /*
