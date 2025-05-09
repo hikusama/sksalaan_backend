@@ -11,6 +11,7 @@ class YouthUser extends Model
     use HasFactory;
     protected $fillable = [
         'youthType',
+        'skills',
     ];
 
 

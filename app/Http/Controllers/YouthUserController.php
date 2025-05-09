@@ -26,28 +26,50 @@ class YouthUserController extends Controller
      */
     public function store(Request $request)
     {
+
         DB::beginTransaction();
         try {
-            // Validate and create the youth user
             $fields = $request->validate([
-                'youthType' => 'required|max:255',
+                'youthType' => 'required|max:50',
+                'skillsf' => 'max:100',
             ]);
-            $yUser = YouthUser::create($fields);
+            $renamedFields = [];
+            foreach ($fields as $key => $value) {
+                if ($key === 'skillsf') {
+                    $renamedFields['skills'] = $value;
+                } else {
+                    $renamedFields[$key] = $value; 
+                }
+            }
+            $yUser = YouthUser::create($renamedFields);
 
-            // Validate and create the youth info
             $fields2 = $this->validateYouthInfo($request);
             $fields2['youth_user_id'] = $yUser->id;
             $info = YouthInfo::create($fields2);
+            $civic = [];
+            $eucbg = [];
+            if ($this->validateEducBG($request)) {
+                $fields3 = $request->input('educbgForm');
+                $fields3['youth_user_id'] = $yUser->id;
+                $eucbg = EducBG::create($fields3);
+            }
 
-            // Validate and create the education background
-            $fields3 = $this->validateEducBG($request);
-            $fields3['youth_user_id'] = $yUser->id;
-            $eucbg = EducBG::create($fields3);
+            if ($this->validateCivicInvolvement($request)) {
+                $fields4 = $request->input('civicForm');
 
-            // Validate and create the civic involvement
-            $fields4 = $this->validateCivicInvolvement($request);
-            $fields4['youth_user_id'] = $yUser->id;
-            $civic = CivicInvolvement::create($fields4);
+                $renamedFields = [];
+                foreach ($fields4 as $key => $value) {
+                    if ($key === 'organization') {
+                        $renamedFields['nameOfOrganization'] = $value;
+                    } elseif ($key === 'orgaddress') {
+                        $renamedFields['addressOfOrganization'] = $value;
+                    } else {
+                        $renamedFields[$key] = $value; 
+                    }
+                }
+                $renamedFields['youth_user_id'] = $yUser->id;
+                $civic = CivicInvolvement::create($renamedFields);
+            }
 
             DB::commit();
             return response()->json([
@@ -58,8 +80,7 @@ class YouthUserController extends Controller
             ]);
         } catch (ValidationException $e) {
             return response()->json([
-                'error' => 'Validation failed',
-                'details' => $e->errors(), // this gives the field-specific error messages
+                'error' => $e->errors(),  
             ], 422);
         } catch (\Exception $th) {
             DB::rollBack();
@@ -70,78 +91,83 @@ class YouthUserController extends Controller
         }
     }
 
-    private function validateYouthStep1(Request $request){
-
-    }
     private function validateYouthInfo(Request $request)
     {
-        return $request->validate([
-            'fname' => 'required',
-            'mname' => 'required',
-            'lname' => 'required',
-            'age' => 'required',
-            'address' => 'required',
-            'dateOfBirth' => 'required|date_format:Y-m-d',
-            'placeOfBirth' => 'required',
-            'height' => 'required|integer',
-            'weight' => 'required|integer',
-            'religion' => 'required',
-            'occupation' => 'required',
+        $fields = $request->validate([
+            'firstname' => 'required|max:60',
+            'middlename' => 'required|max:60',
+            'lastname' => 'required|max:60',
             'sex' => 'required|in:M,F',
-            'civilStatus' => 'required',
-            'noOfChildren' => 'max:20',
+            'gender' => 'max:40',
+            'age' => 'required|integer|between:15,30',
+            'address' => 'required|max:100',
+            'dateOfBirth' => 'required|date_format:Y-m-d',
+            'placeOfBirth' => 'required|max:100',
+            'height' => 'required|integer|max:300',
+            'weight' => 'required|integer|max:200',
+            'religion' => 'required|max:100',
+            'occupation' => 'max:100',
+            'civilStatus' => 'required|max:100',
+            'noOfChildren' => 'nullable|max:30',
         ]);
+        $renamedFields = [];
+        foreach ($fields as $key => $value) {
+            if ($key === 'firstname') {
+                $renamedFields['fname'] = $value;
+            } elseif ($key === 'middlename') {
+                $renamedFields['mname'] = $value;
+            } elseif ($key === 'lastname') {
+                $renamedFields['lname'] = $value;
+            } else {
+                $renamedFields[$key] = $value; 
+            }
+        }
+        return $renamedFields;
     }
 
     private function validateEducBG(Request $request)
     {
-
-        if (
-            $request->filled('level') ||
-            $request->filled('nameOfSchool') ||
-            $request->filled('periodOfAttendance') ||
-            $request->filled('yearGraduate')
-        ) {
-            return $request->validate([
-                'level' => 'required',
-                'nameOfSchool' => 'required',
-                'periodOfAttendance' => 'required',
-                'yearGraduate' => 'required',
-            ]);
-        }
-
-        return $request->validate([
-            'level' => 'nullable',
-            'nameOfSchool' => 'nullable',
-            'periodOfAttendance' => 'nullable',
-            'yearGraduate' => 'nullable',
-        ]);
+ 
+            if (collect($request->educBg)->filter(
+                fn($item) =>
+                !empty($item['level']) ||
+                    !empty($item['nameOfSchool']) ||
+                    !empty($item['pod']) ||
+                    !empty($item['yearGraduate'])
+            )->isNotEmpty()) {
+                return $request->validate([
+                    'educBg' => 'array|min:1',
+                    'educBg.*.level' => 'required|string|max:255',
+                    'educBg.*.nameOfSchool' => 'required|string|max:255',
+                    'educBg.*.pod' => 'required|string|max:255',
+                    'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+                ]);
+            }
+            return false;
+            
+ 
     }
 
     private function validateCivicInvolvement(Request $request)
     {
-        if (
-            $request->filled('nameOfOrganization') ||
-            $request->filled('addressOfOrganization') ||
-            $request->filled('start') ||
-            $request->filled('end') ||
-            $request->filled('yearGraduated')
-        ) {
+        if (collect($request->civic)->filter(function ($item) {
+            return !empty($item['organization']) ||
+                !empty($item['orgaddress']) ||
+                !empty($item['start']) ||
+                !empty($item['end']) ||
+                !empty($item['yearGraduated']);
+        })->isNotEmpty()) {
             return $request->validate([
-                'nameOfOrganization' => 'required',
-                'addressOfOrganization' => 'required',
-                'start' => 'required',
-                'end' => 'required',
-                'yearGraduated' => 'required',
+                'civic' => 'array|min:1',
+                'civic.*.organization' => 'required|string|max:255',
+                'civic.*.orgaddress' => 'required|string|max:255',
+                'civic.*.start' => 'required|date_format:Y-m-d',
+                'civic.*.end' => 'required|string|max:255',
+                'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
             ]);
+            
         }
-        return $request->validate([
-            'nameOfOrganization' => 'nullable',
-            'addressOfOrganization' => 'nullable',
-            'start' => 'nullable',
-            'end' => 'nullable',
-            'yearGraduated' => 'nullable',
-        ]);
+        return false;
     }
 
     /**

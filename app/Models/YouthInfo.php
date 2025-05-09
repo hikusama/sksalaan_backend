@@ -22,6 +22,7 @@ class YouthInfo extends Model
         'religion',
         'occupation',
         'sex',
+        'age',
         'civilStatus',
         'gender',
         'noOfChildren',

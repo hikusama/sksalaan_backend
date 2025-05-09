@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('youth_users', function (Blueprint $table) {
             $table->id();
             $table->string('youthType');
+            $table->string('skills');
             $table->timestamps();
         });
     }
