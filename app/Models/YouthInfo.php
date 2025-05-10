@@ -17,6 +17,7 @@ class YouthInfo extends Model
         'address',
         'dateOfBirth',
         'placeOfBirth',
+        'contactNo',
         'height',
         'weight',
         'religion',
@@ -56,27 +57,8 @@ class YouthInfo extends Model
 
     public function yUser()
     {
-        return $this->belongsTo(YouthUser::class);
+        return $this->belongsTo(YouthUser::class, 'youth_user_id');
     }
 }
 
-
-/*
-	-youth_id - youthuser
-	-fname
-	-mname
-	-lname
-	-address
-	-dateOfBirth
-	-placeOfBirth
-	-height
-	-weight
-	-religion
-	-occupation
-	-sex
-	-civilStatus
-	-gender
-	-noOfChildren
-	
-
-*/
+ 
