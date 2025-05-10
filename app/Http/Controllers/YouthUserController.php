@@ -8,6 +8,7 @@ use App\Models\YouthInfo;
 use App\Models\YouthUser;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,6 +22,58 @@ class YouthUserController extends Controller
         return YouthUser::all();
     }
 
+
+    public function searchName(Request $request)
+    {
+        $search = $request->input('q');
+        $perPage = $request->input('perPage', 15);
+        $page = $request->input('page', 1);
+        $sortBy = $request->input('sortBy', 'fname'); 
+
+
+        $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
+        if (!in_array($sortBy, $allowedFilters)) {
+            return response()->json(['error' => 'Invalid filter field'], 400);
+        }
+
+
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+
+        $results = YouthInfo::where(function ($query) use ($search) {
+            $query->where('fname', 'LIKE', '%' . $search . '%')
+                ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                ->orWhere('lname', 'LIKE', '%' . $search . '%');
+        })
+        ->orderBy($sortBy, "ASC")
+        ->with([
+            'yUser',
+            'yUser.educbg',
+            'yUser.civicInvolvement'
+        ])
+            ->paginate($perPage)
+            ->appends(['search' => $search]);
+
+        $pass = $results->map(function ($info) {
+            return [
+                'youthUser' => [
+                    $info
+                ]
+            ];
+        });
+
+        return response()->json([
+            'data' => $pass,
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'total_pages' => $results->lastPage(),
+                'total_items' => $results->total(),
+            ]
+        ]);
+    }
+
+
     /**
      * Store a newly created resource in storage.
      */
@@ -31,14 +84,14 @@ class YouthUserController extends Controller
         try {
             $fields = $request->validate([
                 'youthType' => 'required|max:50',
-                'skillsf' => 'max:100',
+                'skillsf' => 'nullable|max:100',
             ]);
             $renamedFields = [];
             foreach ($fields as $key => $value) {
                 if ($key === 'skillsf') {
                     $renamedFields['skills'] = $value;
                 } else {
-                    $renamedFields[$key] = $value; 
+                    $renamedFields[$key] = $value;
                 }
             }
             $yUser = YouthUser::create($renamedFields);
@@ -46,41 +99,52 @@ class YouthUserController extends Controller
             $fields2 = $this->validateYouthInfo($request);
             $fields2['youth_user_id'] = $yUser->id;
             $info = YouthInfo::create($fields2);
-            $civic = [];
-            $eucbg = [];
-            if ($this->validateEducBG($request)) {
-                $fields3 = $request->input('educbgForm');
-                $fields3['youth_user_id'] = $yUser->id;
-                $eucbg = EducBG::create($fields3);
-            }
 
-            if ($this->validateCivicInvolvement($request)) {
-                $fields4 = $request->input('civicForm');
+            $educbgData = $this->validateEducBG($request);
+            $educbg = [];
 
-                $renamedFields = [];
-                foreach ($fields4 as $key => $value) {
-                    if ($key === 'organization') {
-                        $renamedFields['nameOfOrganization'] = $value;
-                    } elseif ($key === 'orgaddress') {
-                        $renamedFields['addressOfOrganization'] = $value;
-                    } else {
-                        $renamedFields[$key] = $value; 
-                    }
+            if ($educbgData) {
+                $now = now();
+                foreach ($educbgData['educBg'] as $item) {
+                    $educbg[] = [
+                        'youth_user_id' => $yUser->id,
+                        'level' => $item['level'],
+                        'nameOfSchool' => $item['nameOfSchool'],
+                        'periodOfAttendance' => $item['pod'],
+                        'yearGraduate' => $item['yearGraduate'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                 }
-                $renamedFields['youth_user_id'] = $yUser->id;
-                $civic = CivicInvolvement::create($renamedFields);
+                EducBG::insert($educbg);
             }
+
+            $civicData = $this->validateCivicInvolvement($request);
+            $civic = [];
+
+            if ($civicData) {
+                $now = now();
+                foreach ($civicData['civic'] as $item) {
+                    $civic[] = [
+                        'youth_user_id' => $yUser->id,
+                        'nameOfOrganization' => $item['organization'],
+                        'addressOfOrganization' => $item['orgaddress'],
+                        'start' => $item['start'],
+                        'end' => $item['end'],
+                        'yearGraduated' => $item['yearGraduated'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                CivicInvolvement::insert($civic);
+            }
+
 
             DB::commit();
-            return response()->json([
-                'yUser' => $yUser,
-                'info' => $info,
-                'eucbg' => $eucbg,
-                'civic' => $civic,
-            ]);
+            return response()->json(true);
         } catch (ValidationException $e) {
             return response()->json([
-                'error' => $e->errors(),  
+                'error' => $e->errors(),
             ], 422);
         } catch (\Exception $th) {
             DB::rollBack();
@@ -93,20 +157,25 @@ class YouthUserController extends Controller
 
     private function validateYouthInfo(Request $request)
     {
+        $request['height'] = (int)$request->input('height');
+        $request['weight'] = (int)$request->input('weight');
+        $request['age'] = (int)$request->input('age');
+
         $fields = $request->validate([
             'firstname' => 'required|max:60',
             'middlename' => 'required|max:60',
             'lastname' => 'required|max:60',
             'sex' => 'required|in:M,F',
-            'gender' => 'max:40',
+            'gender' => 'nullable|max:40',
             'age' => 'required|integer|between:15,30',
             'address' => 'required|max:100',
             'dateOfBirth' => 'required|date_format:Y-m-d',
             'placeOfBirth' => 'required|max:100',
+            'contactNo' => 'required|max:11|min:11',
             'height' => 'required|integer|max:300',
             'weight' => 'required|integer|max:200',
             'religion' => 'required|max:100',
-            'occupation' => 'max:100',
+            'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
             'noOfChildren' => 'nullable|max:30',
         ]);
@@ -119,7 +188,7 @@ class YouthUserController extends Controller
             } elseif ($key === 'lastname') {
                 $renamedFields['lname'] = $value;
             } else {
-                $renamedFields[$key] = $value; 
+                $renamedFields[$key] = $value;
             }
         }
         return $renamedFields;
@@ -127,25 +196,23 @@ class YouthUserController extends Controller
 
     private function validateEducBG(Request $request)
     {
- 
-            if (collect($request->educBg)->filter(
-                fn($item) =>
-                !empty($item['level']) ||
-                    !empty($item['nameOfSchool']) ||
-                    !empty($item['pod']) ||
-                    !empty($item['yearGraduate'])
-            )->isNotEmpty()) {
-                return $request->validate([
-                    'educBg' => 'array|min:1',
-                    'educBg.*.level' => 'required|string|max:255',
-                    'educBg.*.nameOfSchool' => 'required|string|max:255',
-                    'educBg.*.pod' => 'required|string|max:255',
-                    'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
-                ]);
-            }
-            return false;
-            
- 
+
+        if (collect($request->educBg)->filter(
+            fn($item) =>
+            !empty($item['level']) ||
+                !empty($item['nameOfSchool']) ||
+                !empty($item['pod']) ||
+                !empty($item['yearGraduate'])
+        )->isNotEmpty()) {
+            return $request->validate([
+                'educBg' => 'array|min:1',
+                'educBg.*.level' => 'required|string|max:255',
+                'educBg.*.nameOfSchool' => 'required|string|max:255',
+                'educBg.*.pod' => 'required|string|max:255',
+                'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+            ]);
+        }
+        return false;
     }
 
     private function validateCivicInvolvement(Request $request)
@@ -165,7 +232,6 @@ class YouthUserController extends Controller
                 'civic.*.end' => 'required|string|max:255',
                 'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
             ]);
-            
         }
         return false;
     }
