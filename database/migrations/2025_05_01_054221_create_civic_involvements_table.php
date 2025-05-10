@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('civic_involvements', function (Blueprint $table) {
             $table->id();
-            $table->integer('youth_user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('youth_user_id')->constrained()->cascadeOnDelete();
             $table->string('nameOfOrganization')->nullable();
             $table->string('addressOfOrganization')->nullable();
             $table->date('start')->nullable();
