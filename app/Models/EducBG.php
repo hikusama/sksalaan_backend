@@ -19,8 +19,9 @@ class EducBG extends Model
     ];
 
 
-    public function yUser(){
-        return $this->belongsTo(YouthUser::class);
+    public function yUser()
+    {
+        return $this->belongsTo(YouthUser::class, 'youth_user_id');
     }
 }
 /*	
