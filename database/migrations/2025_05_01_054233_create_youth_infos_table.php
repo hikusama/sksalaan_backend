@@ -21,10 +21,11 @@ return new class extends Migration
             $table->string('address');
             $table->timestamp('dateOfBirth');
             $table->string('placeOfBirth');
+            $table->integer('contactNo');
             $table->integer('height');
             $table->integer('weight');
             $table->string('religion');
-            $table->string('occupation');
+            $table->string('occupation')->nullable();
             $table->string('sex');
             $table->string('civilStatus')->nullable();
             $table->string('gender')->nullable();
