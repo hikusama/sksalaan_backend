@@ -20,7 +20,7 @@ class civicInvolvement extends Model
     ];
 
     public function yuser()  {
-        return $this->belongsTo(YouthUser::class);
+        return $this->belongsTo(YouthUser::class, 'youth_user_id');
     }
 }
 
