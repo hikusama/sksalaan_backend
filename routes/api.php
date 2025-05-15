@@ -14,6 +14,8 @@ Route::get('/user', function (Request $request) {
 Route::apiResource('youth',YouthUserController::class);
 
 
+Route::post('registerYouth', [YouthUserController::class,'registerYouth']);
+
 Route::post('search', [YouthUserController::class,'searchName']);
 
 Route::post('vals1', [ValidationFormController::class,'valStep1']);

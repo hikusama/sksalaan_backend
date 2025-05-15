@@ -19,7 +19,7 @@ class YouthUserController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware('auth:sanctum', except: ['index'])
+            new Middleware('auth:sanctum', except: ['registerYouth'])
         ];
     }
 
@@ -104,6 +104,86 @@ class YouthUserController extends Controller implements HasMiddleware
                 }
             }
             $renamedFields['user_id'] = $request->user()->id;
+
+            $yUser = YouthUser::create($renamedFields);
+
+            $fields2 = $this->validateYouthInfo($request);
+            $fields2['youth_user_id'] = $yUser->id;
+            $info = YouthInfo::create($fields2);
+
+            $educbgData = $this->validateEducBG($request);
+            $educbg = [];
+
+            if ($educbgData) {
+                $now = now();
+                foreach ($educbgData['educBg'] as $item) {
+                    $educbg[] = [
+                        'youth_user_id' => $yUser->id,
+                        'level' => $item['level'],
+                        'nameOfSchool' => $item['nameOfSchool'],
+                        'periodOfAttendance' => $item['pod'],
+                        'yearGraduate' => $item['yearGraduate'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                EducBG::insert($educbg);
+            }
+
+            $civicData = $this->validateCivicInvolvement($request);
+            $civic = [];
+
+            if ($civicData) {
+                $now = now();
+                foreach ($civicData['civic'] as $item) {
+                    $civic[] = [
+                        'youth_user_id' => $yUser->id,
+                        'nameOfOrganization' => $item['organization'],
+                        'addressOfOrganization' => $item['orgaddress'],
+                        'start' => $item['start'],
+                        'end' => $item['end'],
+                        'yearGraduated' => $item['yearGraduated'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                CivicInvolvement::insert($civic);
+            }
+
+
+            DB::commit();
+            return response()->json(true);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => $e->errors(),
+            ], 422);
+        } catch (\Exception $th) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Failed to create youth user.',
+                'details' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function registerYouth(Request $request)
+    {
+
+        DB::beginTransaction();
+        try {
+            $fields = $request->validate([
+                'youthType' => 'required|max:50',
+                'skillsf' => 'nullable|max:100',
+            ]);
+            $renamedFields = [];
+            foreach ($fields as $key => $value) {
+                if ($key === 'skillsf') {
+                    $renamedFields['skills'] = $value;
+                } else {
+                    $renamedFields[$key] = $value;
+                }
+            }
 
             $yUser = YouthUser::create($renamedFields);
 

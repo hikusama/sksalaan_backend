@@ -30,7 +30,7 @@ class YouthUser extends Model
     }
 
 
-    public function userP()  {
+    public function user()  {
         return $this->belongsTo(User::class, 'user_id');
     }
 }

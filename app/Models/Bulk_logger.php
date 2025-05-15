@@ -14,6 +14,9 @@ class Bulk_logger extends Model
         'user_id',
         'batchNo',
     ];
-    
+        public function user()  {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
 }
  
