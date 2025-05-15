@@ -28,6 +28,11 @@ class YouthUser extends Model
     {
         return $this->hasMany(civicInvolvement::class);
     }
+
+
+    public function userP()  {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }
 /*
 	-youth_id

@@ -13,7 +13,6 @@ class Bulk_logger extends Model
     protected $fillable = [
         'user_id',
         'batchNo',
-        'batchNo',
     ];
     
 }

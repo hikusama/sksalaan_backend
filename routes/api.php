@@ -1,6 +1,6 @@
 <?php
 
-
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\YouthUserController;
 use App\Models\YouthUser;
@@ -23,3 +23,7 @@ Route::post('vals4', [ValidationFormController::class,'valStep4']);
 Route::post('vals3b', [ValidationFormController::class,'valStep3b']);
 Route::post('vals4b', [ValidationFormController::class,'valStep4b']);
 
+
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');;

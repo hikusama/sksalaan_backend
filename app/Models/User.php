@@ -50,8 +50,23 @@ class User extends Authenticatable
 
 
 
-    public function youthInfo()
+    // public function youthInfo()
+    // {
+    //     return $this->hasOne(YouthInfo::class);
+    // }
+
+
+
+    public function youthUser()
     {
-        return $this->hasOne(YouthInfo::class);
+        return $this->hasMany(YouthUser::class);
+    }
+    public function admin()
+    {
+        return $this->hasOne(Admin::class);
+    }
+    public function skofficials()
+    {
+        return $this->hasOne(SkOfficial::class);
     }
 }

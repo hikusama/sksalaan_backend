@@ -9,11 +9,20 @@ use App\Models\YouthUser;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class YouthUserController extends Controller
+class YouthUserController extends Controller implements HasMiddleware
 {
+    public static function middleware()
+    {
+        return [
+            new Middleware('auth:sanctum', except: ['index'])
+        ];
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -28,7 +37,7 @@ class YouthUserController extends Controller
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
-        $sortBy = $request->input('sortBy', 'fname'); 
+        $sortBy = $request->input('sortBy', 'fname');
 
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
@@ -46,12 +55,12 @@ class YouthUserController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-        ->orderBy($sortBy, "ASC")
-        ->with([
-            'yUser',
-            'yUser.educbg',
-            'yUser.civicInvolvement'
-        ])
+            ->orderBy($sortBy, "ASC")
+            ->with([
+                'yUser',
+                'yUser.educbg',
+                'yUser.civicInvolvement'
+            ])
             ->paginate($perPage)
             ->appends(['search' => $search]);
 
@@ -94,6 +103,8 @@ class YouthUserController extends Controller
                     $renamedFields[$key] = $value;
                 }
             }
+            $renamedFields['user_id'] = $request->user()->id;
+
             $yUser = YouthUser::create($renamedFields);
 
             $fields2 = $this->validateYouthInfo($request);
