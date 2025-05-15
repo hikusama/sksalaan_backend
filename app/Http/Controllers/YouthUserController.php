@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\CheckAdmin;
 use App\Models\civicInvolvement;
 use App\Models\EducBG;
 use App\Models\YouthInfo;
@@ -14,14 +15,16 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class YouthUserController extends Controller implements HasMiddleware
+class YouthUserController extends Controller 
 {
-    public static function middleware()
-    {
-        return [
-            new Middleware('auth:sanctum', except: ['registerYouth'])
-        ];
-    }
+    // implements HasMiddleware
+    // public static function middleware()
+    // {
+    //     return [
+    //         new Middleware('auth:sanctum', except: ['registerYouth']),
+    //         new Middleware(CheckAdmin::class, except: ['registerYouth']),
+    //     ];
+    // }
 
     /**
      * Display a listing of the resource.
@@ -93,7 +96,7 @@ class YouthUserController extends Controller implements HasMiddleware
         try {
             $fields = $request->validate([
                 'youthType' => 'required|max:50',
-                'skillsf' => 'nullable|max:100',
+                'skillsf' => 'required|max:100',
             ]);
             $renamedFields = [];
             foreach ($fields as $key => $value) {
@@ -103,7 +106,8 @@ class YouthUserController extends Controller implements HasMiddleware
                     $renamedFields[$key] = $value;
                 }
             }
-            $renamedFields['user_id'] = $request->user()->id;
+
+            // $renamedFields['user_id'] = $request->user()->id;
 
             $yUser = YouthUser::create($renamedFields);
 
@@ -174,7 +178,7 @@ class YouthUserController extends Controller implements HasMiddleware
         try {
             $fields = $request->validate([
                 'youthType' => 'required|max:50',
-                'skillsf' => 'nullable|max:100',
+                'skillsf' => 'required|max:100',
             ]);
             $renamedFields = [];
             foreach ($fields as $key => $value) {
@@ -184,7 +188,7 @@ class YouthUserController extends Controller implements HasMiddleware
                     $renamedFields[$key] = $value;
                 }
             }
-
+// $renamedFields['user_id'] = null;
             $yUser = YouthUser::create($renamedFields);
 
             $fields2 = $this->validateYouthInfo($request);
@@ -414,7 +418,6 @@ class YouthUserController extends Controller implements HasMiddleware
         //     $msg .= $th->getMessage();
         // }
         $youth->delete();
-
 
         return response()->json(['message' => 'Deleted successfylly']);
     }

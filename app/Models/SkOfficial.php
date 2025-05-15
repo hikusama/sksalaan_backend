@@ -12,14 +12,18 @@ class SkOfficial extends Model
 
     protected $fillable = [
         'name',
+        'user_id',
         'position',
     ];
 
 
-    public function user()  {
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function insertedYouth()
+    {
+        return $this->hasMany(YouthUser::class, 'user_id', 'user_id');
+    }
 }
-
-
-
