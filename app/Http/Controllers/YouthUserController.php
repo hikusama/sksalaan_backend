@@ -41,6 +41,7 @@ class YouthUserController extends Controller
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
         $sortBy = $request->input('sortBy', 'fname');
+        $linkedOnly = $request->input('typeId', true);
 
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
@@ -58,14 +59,24 @@ class YouthUserController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-            ->orderBy($sortBy, "ASC")
+            ->when($linkedOnly !== null, function ($query) use ($linkedOnly) {
+                $query->whereHas('yUser', function ($q) use ($linkedOnly) {
+                    if ($linkedOnly) {
+                        $q->whereNotNull('user_id');
+                    } else {
+                        $q->whereNull('user_id');
+                    }
+                });
+            })
+            ->orderBy($sortBy, 'ASC')
             ->with([
                 'yUser',
                 'yUser.educbg',
                 'yUser.civicInvolvement'
             ])
             ->paginate($perPage)
-            ->appends(['search' => $search]);
+            ->appends(['search' => $search, 'linkedOnly' => $linkedOnly]);
+
 
         $pass = $results->map(function ($info) {
             return [
