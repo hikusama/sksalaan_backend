@@ -15,7 +15,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class YouthUserController extends Controller 
+class YouthUserController extends Controller
 {
     // implements HasMiddleware
     // public static function middleware()
@@ -188,7 +188,7 @@ class YouthUserController extends Controller
                     $renamedFields[$key] = $value;
                 }
             }
-// $renamedFields['user_id'] = null;
+            // $renamedFields['user_id'] = null;
             $yUser = YouthUser::create($renamedFields);
 
             $fields2 = $this->validateYouthInfo($request);
@@ -266,7 +266,7 @@ class YouthUserController extends Controller
             'address' => 'required|max:100',
             'dateOfBirth' => 'required|date_format:Y-m-d',
             'placeOfBirth' => 'required|max:100',
-            'contactNo' => 'required|max:11|min:11',
+            'contactNo' => 'required|max:10|min:10',
             'height' => 'required|integer|max:300',
             'weight' => 'required|integer|max:200',
             'religion' => 'required|max:100',
@@ -354,21 +354,26 @@ class YouthUserController extends Controller
      */
     public function update(Request $request, YouthUser $youth)
     {
+        $fields = $request->validate([
+            'youthType' => 'required|max:255',
+            'skillsf' => 'required|max:100',
+        ]);
 
-
-
-
-        $fields = $request->validate(['youthType' => 'required|max:255']);
         $fields2 = $this->validateYouthInfo($request);
         $fields3 = $this->validateEducBG($request);
         $fields4 = $this->validateCivicInvolvement($request);
 
         $youth->load('info', 'educbg', 'civicInvolvement');
 
+        // Fix: map skillsf to skills
+        $ryt = [];
+        foreach ($fields as $key => $value) {
+            $ryt[$key === 'skillsf' ? 'skills' : $key] = $value;
+        }
 
         $changed = false;
 
-        $youth->fill($fields);
+        $youth->fill($ryt);
         if ($youth->isDirty()) {
             $youth->save();
             $changed = true;
@@ -382,26 +387,76 @@ class YouthUserController extends Controller
             }
         }
 
-        if ($youth->educbg) {
-            $youth->educbg->fill($fields3);
-            if ($youth->educbg->isDirty()) {
-                $youth->educbg->save();
+        $erows = [];
+        if (isset($fields3['educBg'])) {
+            foreach ($fields3['educBg'] as $item) {
+                $erows[] = [
+                    'id' => $item['id'] ?? null,
+                    'level' => $item['level'],
+                    'nameOfSchool' => $item['nameOfSchool'],
+                    'periodOfAttendance' => $item['pod'],
+                    'yearGraduate' => $item['yearGraduate'],
+                ];
+            }
+        }
+
+        $educIds = collect($erows)->pluck('id')->filter();
+        $youth->educbg()->whereNotIn('id', $educIds)->delete();
+
+        foreach ($erows as $educData) {
+            if (!empty($educData['id'])) {
+                $educ = $youth->educbg()->find($educData['id']);
+                if ($educ) {
+                    $educ->fill($educData);
+                    if ($educ->isDirty()) {
+                        $educ->save();
+                        $changed = true;
+                    }
+                }
+            } else {
+                $youth->educbg()->create($educData);
                 $changed = true;
             }
         }
 
-        if ($youth->civicInvolvement) {
-            $youth->civicInvolvement->fill($fields4);
-            if ($youth->civicInvolvement->isDirty()) {
-                $youth->civicInvolvement->save();
+        $crows = [];
+        if (isset($fields4['civic'])) {
+            foreach ($fields4['civic'] as $item) {
+                $crows[] = [
+                    'id' => $item['id'] ?? null,
+                    'nameOfOrganization' => $item['organization'],
+                    'addressOfOrganization' => $item['orgaddress'],
+                    'start' => $item['start'],
+                    'end' => $item['end'],
+                    'yearGraduated' => $item['yearGraduated'],
+                ];
+            }
+        }
+
+        $civicIds = collect($crows)->pluck('id')->filter();
+        $youth->civicInvolvement()->whereNotIn('id', $civicIds)->delete();
+
+        foreach ($crows as $civicData) {
+            if (!empty($civicData['id'])) {
+                $civic = $youth->civicInvolvement()->find($civicData['id']);
+                if ($civic) {
+                    $civic->fill($civicData);
+                    if ($civic->isDirty()) {
+                        $civic->save();
+                        $changed = true;
+                    }
+                }
+            } else {
+                $youth->civicInvolvement()->create($civicData);
                 $changed = true;
             }
         }
 
-        $msg = $changed ? 'Youth User updated successfully' : 'Nothing to update';
+        $msg = $changed ? 'Updated successfully...' : 'Nothing to update';
 
         return response()->json(['message' => $msg, 'youth' => $youth]);
     }
+
 
 
     /**

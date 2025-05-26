@@ -33,7 +33,7 @@ class ValidationFormController extends Controller
             'dateOfBirth' => 'required|date_format:Y-m-d',
             'placeOfBirth' => 'required|max:100',
             'noOfChildren' => 'nullable|max:100',
-            'contactNo' => 'required|max:11|min:11',
+            'contactNo' => 'required|max:10|min:10',
             'height' => 'required|integer|max:200',
             'weight' => 'required|integer|max:100',
             'civilStatus' => 'required|max:50',
