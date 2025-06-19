@@ -33,7 +33,7 @@ Route::middleware(['web', 'auth:sanctum'])->group(function () {
 
 Route::middleware(['web', 'auth:sanctum'])->group(function () {
     Route::apiResource('/youth', YouthUserController::class);
-    Route::post('/youthApprove', [YouthUserController::class, 'youthApprove']);
+    Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
     Route::post('/search', [YouthUserController::class, 'searchName']);
     Route::apiResource('supah', Supabase::class);
     Route::get('/getUser/{id}', [AuthController::class, 'getUserById']);
