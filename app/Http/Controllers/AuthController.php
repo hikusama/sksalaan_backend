@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\YouthUser;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -41,7 +42,43 @@ class AuthController extends Controller
         return 1;
     }
 
-    public function login(Request $request)
+
+    public function loginAdmin(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'password' => 'required',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'errors' => [
+                    'password' => 'Incorrect password.'
+                ]
+            ], 422);
+        }
+
+        if ($user->role !== 'Admin') {
+            return response()->json([
+                'errors' => [
+                    'auth' => 'Unauthorized access.'
+                ]
+            ], 403);
+        }
+
+        Auth::login($user); 
+        
+
+        return response()->json([
+            'user' => $user,
+            'info' => $user->admin
+        ]);
+    }
+
+
+    public function loginOfficials(Request $request)
     {
 
         $request->validate([
@@ -51,17 +88,34 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+
+        $errors = [];
+
+        if (!$user) {
+            $errors['email'] = 'Email not Exist.';
+        }
+        if (!Hash::check($request->password, $user->password)) {
+            $errors['password'] = 'Incorrect Password.';
+        }
+
+        if ($errors) {
             return [
                 'errors' => [
-                    'email' => [
-                        'The provided credentials are incorrect.'
-                    ]
+                    ...$errors
+                ]
+            ];
+        }
+
+        if (!$user->role != 'SKOfficial') {
+            return [
+                'errors' => [
+                    'auth' => 'Unauthorize'
                 ]
             ];
         }
 
         $token = $user->createToken($user->userName);
+
 
         return [
             'token' => $token->plainTextToken,
@@ -140,7 +194,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function destroy(Request $request,SkOfficial $id)
+    public function destroy(Request $request, SkOfficial $id)
     {
         // $msg = 'Something went wrong ';
         // try {
@@ -151,7 +205,7 @@ class AuthController extends Controller
         //     $msg .= $th->getMessage();
         // }
         // $youth->delete();
-        $user = $request->user(); 
+        $user = $request->user();
 
         if (!$user) {
             return response()->json(['message' => $user], 401);

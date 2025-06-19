@@ -11,8 +11,8 @@ class CheckAdmin
     {
         $user = $request->user();
 
-        if (!$user || $user->role !== 'Admin') {
-            return response()->json(['error' => 'role unauthorized'], 403);
+        if (!$user || $user->role != 'Admin') {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         return $next($request);
