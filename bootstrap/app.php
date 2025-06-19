@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->group('web', [
+        $middleware->group('api', [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,

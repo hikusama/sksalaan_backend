@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Middleware\CheckAdmin;
 use App\Models\civicInvolvement;
 use App\Models\EducBG;
+use App\Models\User;
 use App\Models\YouthInfo;
 use App\Models\YouthUser;
 use Exception;
@@ -363,6 +364,16 @@ class YouthUserController extends Controller
     /**
      * Update the specified resource in storage.
      */
+    public function youthApprove(Request $request, YouthUser $youth)
+    {
+        $user = User::findOrFail($request->input('user_id'));
+        $yUser = YouthUser::findOrFail($request->input('youthid'));
+        $yUser->update([
+            'user_id' => $user,
+        ]);
+        return 1;
+    }
+    
     public function update(Request $request, YouthUser $youth)
     {
         $fields = $request->validate([

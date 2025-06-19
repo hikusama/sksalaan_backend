@@ -70,12 +70,10 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        $user = $user->load('admin'); 
 
         return response()->json([
-            'user' => [
-                ...$user->toArray(),
-                'admin' => $user->admin, 
-            ]
+            'user' => $user
         ]);
     }
 
