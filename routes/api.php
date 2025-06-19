@@ -12,14 +12,12 @@ Route::middleware(['web', 'auth:sanctum'])->get('/user', function (Request $requ
     $user = $request->user()->load('admin'); 
     return [
         'user' => $user,
-        'info' => $user->admin
     ];
  });
 Route::middleware(['web', 'auth:sanctum'])->get('/userAPI', function (Request $request) {
     $user = $request->user()->load('skofficials');  
     return [
         'user' => $user,
-        'info' => $user->skofficials
     ];
  });
 
