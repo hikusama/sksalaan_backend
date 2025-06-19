@@ -68,12 +68,14 @@ class AuthController extends Controller
             ], 403);
         }
 
-        Auth::login($user); 
-        
+        Auth::login($user);
+
 
         return response()->json([
-            'user' => $user,
-            'info' => $user->admin
+            'user' => [
+                ...$user->toArray(),
+                'admin' => $user->admin, 
+            ]
         ]);
     }
 
