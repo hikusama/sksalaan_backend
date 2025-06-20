@@ -7,8 +7,9 @@ use App\Http\Controllers\YouthUserController;
 use App\Models\YouthUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\CheckAdmin;
 
-Route::middleware(['web', 'auth:sanctum'])->get('/user', function (Request $request) {
+Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->get('/user', function (Request $request) {
     $user = $request->user()->load('admin'); 
     return [
         'user' => $user,
@@ -31,7 +32,7 @@ Route::middleware(['web', 'auth:sanctum'])->group(function () {
     Route::post('vals4b', [ValidationFormController::class, 'valStep4b']);
 });
 
-Route::middleware(['web', 'auth:sanctum'])->group(function () {
+Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function () {
     Route::apiResource('/youth', YouthUserController::class);
     Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
     Route::post('/search', [YouthUserController::class, 'searchName']);
