@@ -60,14 +60,10 @@ class YouthUserController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-            ->when($linkedOnly !== null, function ($query) use ($linkedOnly) {
-                $query->whereHas('yUser', function ($q) use ($linkedOnly) {
-                    if ($linkedOnly) {
-                        $q->whereNotNull('user_id');
-                    } else {
-                        $q->whereNull('user_id');
-                    }
-                });
+            ->when($linkedOnly, function ($query) {
+                return $query->whereNotNull('user_id');
+            },  function ($query) {
+                return $query->whereNull('user_id');
             })
             ->orderBy($sortBy, 'ASC')
             ->with([
@@ -372,7 +368,7 @@ class YouthUserController extends Controller
         $yUser->save();
         return 'Success';
     }
-    
+
     public function update(Request $request, YouthUser $youth)
     {
         $fields = $request->validate([
