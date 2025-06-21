@@ -368,10 +368,9 @@ class YouthUserController extends Controller
     {
         $user = User::findOrFail($request->input('user_id'));
         $yUser = YouthUser::findOrFail($request->input('youthid'));
-        $yUser->update([
-            'user_id' => $user,
-        ]);
-        return 1;
+        $yUser->user_id =  $user->id;
+        $yUser->save();
+        return 'Success';
     }
     
     public function update(Request $request, YouthUser $youth)

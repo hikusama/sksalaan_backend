@@ -37,7 +37,7 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
     Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
     Route::post('/search', [YouthUserController::class, 'searchName']);
     Route::apiResource('supah', Supabase::class);
-    Route::get('/getUser/{id}', [AuthController::class, 'getUserById']);
+    Route::post('/user/modify', [AuthController::class, 'modifyUser']);
     Route::delete('/deleteskaccount/{id}', [AuthController::class, 'destroy'])->middleware('auth:sanctum');;
     Route::post('/searchSkOfficial', [AuthController::class, 'searchSkOfficial']);
     Route::post('/register', [AuthController::class, 'register']);

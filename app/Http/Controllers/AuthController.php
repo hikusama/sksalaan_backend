@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -25,7 +26,7 @@ class AuthController extends Controller
         $fields = $request->validate([
             'userName' => 'required|max:100|unique:users',
             'email' => 'required|email|unique:users',
-            'password' => 'required|confirmed',
+            'password' => 'required|min:8|confirmed',
         ]);
         $skofficialInfo = $request->validate([
             'name' => 'required|max:100',
@@ -41,6 +42,53 @@ class AuthController extends Controller
 
         return 1;
     }
+
+    public function modifyUser(Request $request, SkOfficial $offid)
+    {
+        $skid = SkOfficial::findOrFail($request->input('id'));
+        $user = User::findOrFail($request->input('user_id'));
+        $rules = [
+            'userName' => [
+                'required',
+                'max:100',
+                Rule::unique('users')->ignore($user->id)
+            ],
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users')->ignore($user->id)
+            ],
+            'name' => 'required|max:100',
+            'position' => 'required|max:100',
+        ];
+        if ($request->filled('password')) {
+            $rules['password'] = 'required|min:8|confirmed';
+        }
+
+        $vd = $request->validate($rules);
+        $user->userName = $vd['userName'];
+        $user->email = $vd['email'];
+        if (!empty($vd['password'])) {
+            $user->password = bcrypt($vd['password']);
+        }
+        $skid->position = $vd['position'];
+        $skid->name = $vd['name'];
+        $isdt = false;
+        if ($user->isDirty()) {
+            $user->save();
+            $isdt = true;
+        }
+        if ($skid->isDirty()) {
+            $skid->save();
+            $isdt = true;
+        }
+
+        return [
+            'msg' => $isdt ? 'updated successfully...' : 'no changes made!',
+            'isDirty' => $isdt,
+        ];
+    }
+
 
 
     public function loginAdmin(Request $request)
@@ -70,7 +118,7 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        $user = $user->load('admin'); 
+        $user = $user->load('admin');
 
         return response()->json([
             'user' => $user
@@ -178,21 +226,7 @@ class AuthController extends Controller
 
 
 
-    public function getUserById($id)
-    {
-        $user = User::with(['skofficials'])->find($id);
 
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        $ch = $user->admin ?? $user->skofficials;
-
-        return response()->json([
-            'user' => $user,
-            'ch' => $ch,
-        ]);
-    }
 
     public function destroy(Request $request, SkOfficial $id)
     {
