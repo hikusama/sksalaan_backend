@@ -42,14 +42,12 @@ class YouthUserController extends Controller
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
         $sortBy = $request->input('sortBy', 'fname');
-        $linkedOnly = $request->input('typeId', true);
-
+        $typeId = $request->input('typeId');
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
         if (!in_array($sortBy, $allowedFilters)) {
             return response()->json(['error' => 'Invalid filter field'], 400);
         }
-
 
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
@@ -60,10 +58,15 @@ class YouthUserController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-            ->when($linkedOnly, function ($query) {
-                return $query->whereNotNull('user_id');
-            },  function ($query) {
-                return $query->whereNull('user_id');
+            ->when(!is_null($typeId), function ($query) use ($typeId) {
+                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
+                return $linked
+                    ? $query->whereHas('yUser', function ($q) {
+                        $q->whereNotNull('user_id');
+                    })
+                    : $query->whereHas('yUser', function ($q) {
+                        $q->whereNull('user_id');
+                    });
             })
             ->orderBy($sortBy, 'ASC')
             ->with([
@@ -72,8 +75,13 @@ class YouthUserController extends Controller
                 'yUser.civicInvolvement'
             ])
             ->paginate($perPage)
-            ->appends(['search' => $search, 'linkedOnly' => $linkedOnly]);
-
+            ->appends([
+                'q' => $search,
+                'typeId' => $typeId,
+                'sortBy' => $sortBy,
+                'perPage' => $perPage,
+                'page' => $page
+            ]);
 
         $pass = $results->map(function ($info) {
             return [
