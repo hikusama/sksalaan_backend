@@ -28,6 +28,10 @@ class YouthUser extends Model
     {
         return $this->hasMany(civicInvolvement::class);
     }
+    public function job_supp()
+    {
+        return $this->hasMany(Job_support::class);
+    }
 
 
     public function user()  {
