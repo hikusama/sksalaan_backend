@@ -2,16 +2,30 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Admin;
 use Illuminate\Database\Seeder;
+use App\Models\User; // adjust if your user model is in a different namespace
+use Illuminate\Support\Facades\Hash;
 
-class AdminSeeder extends Seeder
+class AdminUserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
+    public function run()
     {
-        
+        $user = User::updateOrCreate(
+            ['email' => env('ADMIN_EMAIL', 'admin@example.com')],
+            [
+                'userName' => 'Admin',
+                'password' => Hash::make(env('ADMIN_PASSWORD', 'admin123')),
+                'role' => 'Admin'
+            ]
+        );
+        Admin::updateOrCreate(
+            ['youth_user_id' => $user->id],
+            [
+                'name' => 'sksalaan',
+                'name' => 'sksalaan',
+                'position' => 'SKChairman',
+            ]
+        );
     }
 }

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('youth_user_id')->constrained()->cascadeOnDelete();
             $table->string('task');
-            $table->integer('paid_at');
+            $table->integer('paid_at')->nullable();
             $table->string('location');
             $table->date('start')->nullable();
             $table->date('end')->nullable();
