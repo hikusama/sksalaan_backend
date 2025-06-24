@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 use App\Models\User; // adjust if your user model is in a different namespace
 use Illuminate\Support\Facades\Hash;
 
-class AdminUserSeeder extends Seeder
+class AdminSeeder extends Seeder
 {
     public function run()
     {
@@ -20,9 +20,8 @@ class AdminUserSeeder extends Seeder
             ]
         );
         Admin::updateOrCreate(
-            ['youth_user_id' => $user->id],
+            ['user_id' => $user->id],
             [
-                'name' => 'sksalaan',
                 'name' => 'sksalaan',
                 'position' => 'SKChairman',
             ]
