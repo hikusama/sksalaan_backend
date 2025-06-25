@@ -25,21 +25,27 @@ class ValidationFormController extends Controller
     {
         $request['height'] = (int)$request->input('height');
         $request['weight'] = (int)$request->input('weight');
-        
+
         $request->validate([
             'youthType' => 'required|max:100',
-            'skills' => 'nullable|array',
+            'skills' => 'required|array',
             'skills.*' => 'string|max:100',
-            'dateOfBirth' => 'required|date_format:Y-m-d',
+            'dateOfBirth' => [
+                'required',
+                'date_format:Y-m-d',
+                'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
+                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),  
+            ],
             'placeOfBirth' => 'required|max:100',
             'noOfChildren' => 'nullable|max:100',
-            'contactNo' => 'required|max:10|min:10',
+            'contactNo' => 'required|digits:10',
             'height' => 'required|integer|max:200',
             'weight' => 'required|integer|max:100',
             'civilStatus' => 'required|max:50',
             'occupation' => 'nullable|max:100',
             'religion' => 'required|max:100',
         ]);
+
         return true;
     }
     public function valStep3(Request $request)
@@ -50,7 +56,7 @@ class ValidationFormController extends Controller
                     !empty($item['nameOfSchool']) ||
                     !empty($item['pod']) ||
                     !empty($item['yearGraduate']);
-                })->isNotEmpty()) {
+            })->isNotEmpty()) {
                 $request->validate([
                     'educBg' => 'array|min:1',
                     'educBg.*.level' => 'required|string|max:255',
@@ -89,7 +95,6 @@ class ValidationFormController extends Controller
                     'civic.*.end' => 'required|string|max:255',
                     'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
                 ]);
-                
             }
 
             return true;

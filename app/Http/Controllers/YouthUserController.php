@@ -38,6 +38,7 @@ class YouthUserController extends Controller
 
     public function searchName(Request $request)
     {
+
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
@@ -123,8 +124,7 @@ class YouthUserController extends Controller
                 }
             }
 
-            // $renamedFields['user_id'] = $request->user()->id;
-
+            $renamedFields['user_id'] = $request->user()->id;
             $yUser = YouthUser::create($renamedFields);
 
             $fields2 = $this->validateYouthInfo($request);
@@ -172,7 +172,10 @@ class YouthUserController extends Controller
 
 
             DB::commit();
-            return response()->json(true);
+            return response()->json([
+                'adssad' => $request->user()->id,
+                'ads' => $renamedFields,
+            ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'error' => $e->errors(),
@@ -280,8 +283,12 @@ class YouthUserController extends Controller
             'gender' => 'nullable|max:40',
             'age' => 'required|integer|between:15,30',
             'address' => 'required|max:100',
-            'dateOfBirth' => 'required|date_format:Y-m-d',
-            'placeOfBirth' => 'required|max:100',
+            'dateOfBirth' => [
+                'required',
+                'date_format:Y-m-d',
+                'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
+                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),  
+            ],            'placeOfBirth' => 'required|max:100',
             'contactNo' => 'required|max:10|min:10',
             'height' => 'required|integer|max:300',
             'weight' => 'required|integer|max:200',
