@@ -46,7 +46,8 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-Route::post('registerYouth', [JobPlacementController::class, 'searchJobPlacedYouth']);
+Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
+Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
 
 Route::post('/registerYouth', [YouthUserController::class, 'registerYouth']);
 

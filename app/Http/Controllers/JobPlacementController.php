@@ -35,8 +35,8 @@ class JobPlacementController extends Controller
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
                 return $linked
-                    ? $query->whereHas('yUser', function ($q) {
-                        $q->whereNotNull('user_id');
+                    ? $query->whereHas('yUser.job_supp', function ($q) {
+                        $q->whereNotNull('youth_user_id');
                     })
                     : $query->whereHas('yUser', function ($q) {
                         $q->whereNull('user_id');
@@ -50,6 +50,59 @@ class JobPlacementController extends Controller
             ->appends([
                 'q' => $search,
                 'typeId' => $typeId,
+                'sortBy' => $sortBy,
+                'perPage' => $perPage,
+                'page' => $page
+            ]);
+
+        $pass = $results->map(function ($info) {
+            return [
+                'youthUser' => [
+                    $info
+                ]
+            ];
+        });
+
+        return response()->json([
+            'data' => $pass,
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'total_pages' => $results->lastPage(),
+                'total_items' => $results->total(),
+            ]
+        ]);
+    }
+
+
+
+    public function youthLightData(Request $request)
+    {
+        $search = $request->input('q');
+        $perPage = $request->input('perPage', 15);
+        $page = $request->input('page', 1);
+        $sortBy = $request->input('sortBy', 'fname');
+
+        $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
+        if (!in_array($sortBy, $allowedFilters)) {
+            return response()->json(['error' => 'Invalid filter field'], 400);
+        }
+
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+
+        $results = YouthInfo::where(function ($query) use ($search) {
+            $query->where('fname', 'LIKE', '%' . $search . '%')
+                ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                ->orWhere('lname', 'LIKE', '%' . $search . '%');
+        })
+            ->orderBy($sortBy, 'ASC')
+            ->with([
+                'yUser',
+            ])
+            ->paginate($perPage)
+            ->appends([
+                'q' => $search,
                 'sortBy' => $sortBy,
                 'perPage' => $perPage,
                 'page' => $page
