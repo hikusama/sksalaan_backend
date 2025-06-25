@@ -9,7 +9,7 @@ use Illuminate\Pagination\Paginator;
 class JobPlacementController extends Controller
 {
     //
-    
+
     public function searchJobPlacedYouth(Request $request)
     {
         $search = $request->input('q');
@@ -32,15 +32,8 @@ class JobPlacementController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-            ->when(!is_null($typeId), function ($query) use ($typeId) {
-                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
-                return $linked
-                    ? $query->whereHas('yUser.job_supp', function ($q) {
-                        $q->whereNotNull('youth_user_id');
-                    })
-                    : $query->whereHas('yUser', function ($q) {
-                        $q->whereNull('user_id');
-                    });
+            ->whereIn('youth_user_id',function ($query) {
+                $query->select('youth_user_id')->from('job_supports');
             })
             ->orderBy($sortBy, 'ASC')
             ->with([
