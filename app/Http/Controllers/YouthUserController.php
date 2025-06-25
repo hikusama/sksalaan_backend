@@ -32,7 +32,7 @@ class YouthUserController extends Controller
      */
     public function index()
     {
-        return YouthUser::all();
+        // return YouthUser::all();
     }
 
 
