@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\YouthInfo;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
 
 class JobPlacementController extends Controller
 {
@@ -32,7 +33,7 @@ class JobPlacementController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-            ->whereIn('youth_user_id',function ($query) {
+            ->whereIn('youth_user_id', function ($query) {
                 $query->select('youth_user_id')->from('job_supports');
             })
             ->orderBy($sortBy, 'ASC')
@@ -91,8 +92,11 @@ class JobPlacementController extends Controller
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
             ->orderBy($sortBy, 'ASC')
-            ->with([
-                'yUser',
+            ->with('yUser')
+            ->addSelect([
+                'job_supports_count' => DB::table('job_supports')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('job_supports.youth_user_id', 'youth_infos.youth_user_id')
             ])
             ->paginate($perPage)
             ->appends([

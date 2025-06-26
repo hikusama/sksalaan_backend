@@ -59,6 +59,7 @@ class YouthInfo extends Model
     {
         return $this->belongsTo(YouthUser::class, 'youth_user_id');
     }
+    
 }
 
  
