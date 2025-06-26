@@ -38,6 +38,7 @@ class JobPlacementController extends Controller
             ->orderBy($sortBy, 'ASC')
             ->with([
                 'yUser',
+                'yUser.job_supp',
             ])
             ->paginate($perPage)
             ->appends([
