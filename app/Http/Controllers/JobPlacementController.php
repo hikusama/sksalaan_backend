@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Job_support;
 use App\Models\YouthInfo;
+use App\Models\YouthUser;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +72,25 @@ class JobPlacementController extends Controller
 
 
 
+    public function recruitYouth(Request $request)
+    {
+        
+        $recruited = $request->validate([
+            'youth_user_id' => 'required|max:100',
+            'task' => 'required|max:100',
+            'paid_at' => 'nullable|max:100',
+            'amountToPay' => 'required|integer|between:100,10000',
+            'location' => 'required|max:100',
+            'start' => 'required|max:100',
+            'end' => 'required|max:100',
+        ]);
+
+        Job_support::create($recruited);
+
+        return response()->json([
+            'data' => $recruited,
+        ]);
+    }
     public function youthLightData(Request $request)
     {
         $search = $request->input('q');

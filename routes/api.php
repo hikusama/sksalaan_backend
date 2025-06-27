@@ -47,6 +47,7 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
+    Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
     Route::post('/logout-web', function (Request $request){
         Auth::guard('web')->logout();
         $request->session()->invalidate();

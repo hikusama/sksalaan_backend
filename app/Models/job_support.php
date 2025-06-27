@@ -11,6 +11,7 @@ class Job_support extends Model
         'youth_user_id',
         'task',
         'paid_at',
+        'amountToPay',
         'location',
         'start',
         'end',
