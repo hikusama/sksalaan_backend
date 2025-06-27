@@ -76,7 +76,7 @@ class JobPlacementController extends Controller
     {
         
         $recruited = $request->validate([
-            'youth_user_id' => 'required|max:100',
+            'youth_user_id' => 'required',
             'task' => 'required|max:100',
             'paid_at' => 'nullable|max:100',
             'amountToPay' => 'required|integer|between:100,10000',
