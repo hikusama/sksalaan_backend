@@ -19,7 +19,6 @@ class JobPlacementController extends Controller
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
         $sortBy = $request->input('sortBy', 'fname');
-        $typeId = $request->input('typeId');
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
         if (!in_array($sortBy, $allowedFilters)) {
@@ -30,38 +29,42 @@ class JobPlacementController extends Controller
             return $page;
         });
 
-        $results = YouthInfo::where(function ($query) use ($search) {
-            $query->where('fname', 'LIKE', '%' . $search . '%')
-                ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%');
-        })
-            ->whereIn('youth_user_id', function ($query) {
-                $query->select('youth_user_id')->from('job_supports');
+        $results = DB::table('youth_users')
+            ->leftJoin('job_supports', 'youth_users.id', '=', 'job_supports.youth_user_id')
+            ->join('youth_infos', 'youth_infos.youth_user_id', '=', 'youth_users.id') 
+            ->where(function ($query) use ($search) {
+                $query->where('youth_infos.fname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('youth_infos.mname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('youth_infos.lname', 'LIKE', '%' . $search . '%');
             })
-            ->orderBy($sortBy, 'ASC')
-            ->with([
-                'yUser',
-                'yUser.job_supp',
-            ])
+            ->orderBy("youth_infos.$sortBy", 'ASC')
+            ->select(
+                'youth_infos.youth_user_id',
+                'youth_infos.fname',
+                'youth_infos.mname',
+                'youth_infos.lname',
+                'youth_infos.age',
+                'youth_infos.address',
+
+                'youth_users.skills',
+                'youth_users.youthType',
+                'job_supports.task',
+                'job_supports.amountToPay',
+                'job_supports.paid_at',
+                'job_supports.location',
+                'job_supports.start',
+                'job_supports.end',
+            )
             ->paginate($perPage)
             ->appends([
                 'q' => $search,
-                'typeId' => $typeId,
                 'sortBy' => $sortBy,
                 'perPage' => $perPage,
                 'page' => $page
             ]);
 
-        $pass = $results->map(function ($info) {
-            return [
-                'youthUser' => [
-                    $info
-                ]
-            ];
-        });
-
         return response()->json([
-            'data' => $pass,
+            'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
                 'total_pages' => $results->lastPage(),
@@ -74,16 +77,22 @@ class JobPlacementController extends Controller
 
     public function recruitYouth(Request $request)
     {
-        
+
+
         $recruited = $request->validate([
             'youth_user_id' => 'required',
             'task' => 'required|max:100',
-            'paid_at' => 'nullable|max:100',
             'amountToPay' => 'required|integer|between:100,10000',
             'location' => 'required|max:100',
-            'start' => 'required|max:100',
-            'end' => 'required|max:100',
+            'start' => 'required|date_format:Y-m-d|before_or_equal:end',
+            'end' => 'required|date_format:Y-m-d|after_or_equal:start',
         ]);
+
+        if ($request->input('paid_at') == 'yes') {
+            $recruited['paid_at'] =  now();
+        } else {
+            $recruited['paid_at'] =  NULL;
+        }
 
         Job_support::create($recruited);
 
@@ -129,9 +138,15 @@ class JobPlacementController extends Controller
 
         $pass = $results->map(function ($info) {
             return [
-                'youthUser' => [
-                    $info
-                ]
+                'id' => $info->id,
+                'youth_user_id' => $info->youth_user_id,
+                'fname' => $info->fname,
+                'mname' => $info->mname,
+                'lname' => $info->lname,
+                'age' => $info->age,
+                'jobCount' => $info->job_supports_count,
+                'created_at' => $info->created_at,
+                'user' => $info->yUser,
             ];
         });
 
