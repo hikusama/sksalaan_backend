@@ -41,7 +41,7 @@ class YouthInfoController extends Controller
             ->orderBy('age')
             ->get();
 
-        $civilstats =  YouthInfo::select('civilcivilStatus', DB::raw('COUNT(*) as count'))
+        $civilStats =  YouthInfo::select('civilcivilStatus', DB::raw('COUNT(*) as count'))
             ->whereIn('civilcivilStatus', [
                 'Single',
                 'Married',
@@ -69,7 +69,8 @@ class YouthInfoController extends Controller
         return response()->json([
             'sexes' => $sex,
             'genders' => $gender,
-
+            'civilStats' => $civilStats,
+            'religionsd' => $religions,
             'ages' => $ages
         ]);
     }
