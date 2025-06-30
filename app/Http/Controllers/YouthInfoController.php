@@ -44,6 +44,7 @@ class YouthInfoController extends Controller
         return response()->json([
             'sexes' => $sex,
             'genders' => $gender,
+
             'ages' => $ages
         ]);
     }
