@@ -41,6 +41,17 @@ class YouthInfoController extends Controller
             ->orderBy('age')
             ->get();
 
+        $civilstats =  YouthInfo::select('civilcivilStatus', DB::raw('COUNT(*) as count'))
+            ->whereIn('civilcivilStatus', [
+                'Single',
+                'Married',
+                'Divorce',
+                'Outside-marriage',
+            ])
+            ->groupBy('civilStatus')
+            ->orderBy('civilStatus')
+            ->get();
+
         $religions =  YouthInfo::select('religion', DB::raw('COUNT(*) as count'))
             ->whereIn('religion', [
                 'Islam',
