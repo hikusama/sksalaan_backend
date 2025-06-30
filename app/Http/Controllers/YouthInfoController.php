@@ -41,6 +41,22 @@ class YouthInfoController extends Controller
             ->orderBy('age')
             ->get();
 
+        $religions =  YouthInfo::select('religion', DB::raw('COUNT(*) as count'))
+            ->whereIn('religion', [
+                'Islam',
+                'Roman Catholic',
+                'Iglesia ni Cristo',
+                'Seventh Day Adventist',
+                'Judaism',
+                'Buddhism',
+                'Hinduism',
+                'Atheism',
+                'Others',
+            ])
+            ->groupBy('religion')
+            ->orderBy('religion')
+            ->get();
+
         return response()->json([
             'sexes' => $sex,
             'genders' => $gender,
