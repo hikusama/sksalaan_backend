@@ -44,9 +44,7 @@ class YouthInfoController extends Controller
         $religions =  YouthInfo::select('religion', DB::raw('COUNT(*) as count'))
             ->whereIn('religion', [
                 'Islam',
-                'Roman Catholic',
-                'Iglesia ni Cristo',
-                'Seventh Day Adventist',
+                'Christianity',
                 'Judaism',
                 'Buddhism',
                 'Hinduism',
