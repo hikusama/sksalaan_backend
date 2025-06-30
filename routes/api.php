@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\Supabase;
 use App\Http\Controllers\ValidationFormController;
+use App\Http\Controllers\YouthInfoController;
 use App\Http\Controllers\YouthUserController;
 use App\Models\YouthUser;
 use Illuminate\Http\Request;
@@ -48,6 +49,7 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
     Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
     Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
+    Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
     Route::post('/logout-web', function (Request $request){
         Auth::guard('web')->logout();
         $request->session()->invalidate();
