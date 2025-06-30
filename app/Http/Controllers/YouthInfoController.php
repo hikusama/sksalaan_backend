@@ -5,64 +5,52 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreyouthInfoRequest;
 use App\Http\Requests\UpdateyouthInfoRequest;
 use App\Models\YouthInfo;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\DB;
 
 class YouthInfoController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource.   
      */
-    public function index()
+    public function getInfoData()
     {
-        return YouthInfo::all();
+
+        $sex = YouthInfo::select('sex', DB::raw('COUNT(*) as count'))
+            ->whereIn('sex', ['Male', 'Female'])
+            ->groupBy('sex')
+            ->get();
+
+
+        $gender = YouthInfo::select('gender', DB::raw('COUNT(*) as count'))
+            ->where(function ($query) {
+                $query->whereIn('gender', [
+                    'Non-binary',
+                    'Transgender',
+                    'Agender',
+                    'Bigender',
+                    'Others'
+                ])->orWhereNull('gender');
+            })
+            ->groupBy('gender')
+            ->get();
+
+        $ages =  YouthInfo::select('age', DB::raw('COUNT(*) as count'))
+            ->whereIn('age', [range(15, 30)])
+            ->groupBy('age')
+            ->orderBy('age')
+            ->get();
+
+        return response()->json([
+            'sexes' => $sex,
+            'genders' => $gender,
+            'ages' => $ages
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreyouthInfoRequest $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(YouthInfo $youthInfo)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(YouthInfo $youthInfo)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateyouthInfoRequest $request, YouthInfo $youthInfo)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(YouthInfo $youthInfo)
     {
         //
     }
-
-
 }
