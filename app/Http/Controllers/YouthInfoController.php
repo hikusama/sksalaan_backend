@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreyouthInfoRequest;
 use App\Http\Requests\UpdateyouthInfoRequest;
 use App\Models\YouthInfo;
+use App\Models\YouthUser;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,13 +17,19 @@ class YouthInfoController extends Controller
     public function getInfoData()
     {
 
+        $yt = YouthUser::select('youthType as name', DB::raw('COUNT(*) as value'))
+            ->whereIn('youthType', ['ISY', 'OSY'])
+            ->groupBy('youthType')
+            ->get();
+
         $sex = YouthInfo::select('sex as name', DB::raw('COUNT(*) as value'))
             ->whereIn('sex', ['Male', 'Female'])
             ->groupBy('sex')
             ->get();
 
 
-        $gender = YouthInfo::select('gender as name', DB::raw('COUNT(*) as value'))
+
+        $gender = YouthInfo::select('gender', DB::raw('COUNT(*) as value'))
             ->where(function ($query) {
                 $query->whereIn('gender', [
                     'Non-binary',
@@ -33,7 +40,13 @@ class YouthInfoController extends Controller
                 ])->orWhereNull('gender');
             })
             ->groupBy('gender')
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->gender ?? 'Not-specified',
+                    'value' => $item->value,
+                ];
+            });
 
         $ages =  YouthInfo::select('age', DB::raw('COUNT(*) as count'))
             ->whereIn('age', range(15, 30))
@@ -71,7 +84,8 @@ class YouthInfoController extends Controller
             'genders' => $gender,
             'civilStats' => $civilStats,
             'religions' => $religions,
-            'ages' => $ages
+            'ages' => $ages,
+            'youthType' => $yt,
         ]);
     }
 

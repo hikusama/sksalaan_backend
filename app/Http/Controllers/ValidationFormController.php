@@ -14,7 +14,7 @@ class ValidationFormController extends Controller
             'firstname' => 'required|max:60',
             'middlename' => 'required|max:60',
             'lastname' => 'required|max:60',
-            'sex' => 'required|in:M,F',
+            'sex' => 'required|in:Male,Female',
             'gender' => 'nullable|max:40',
             'age' => 'required|integer|between:15,30',
             'address' => 'required|max:100',
