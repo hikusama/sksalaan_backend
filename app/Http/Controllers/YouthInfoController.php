@@ -16,13 +16,13 @@ class YouthInfoController extends Controller
     public function getInfoData()
     {
 
-        $sex = YouthInfo::select('sex', DB::raw('COUNT(*) as count'))
+        $sex = YouthInfo::select('sex as name', DB::raw('COUNT(*) as value'))
             ->whereIn('sex', ['Male', 'Female'])
             ->groupBy('sex')
             ->get();
 
 
-        $gender = YouthInfo::select('gender', DB::raw('COUNT(*) as count'))
+        $gender = YouthInfo::select('gender as name', DB::raw('COUNT(*) as value'))
             ->where(function ($query) {
                 $query->whereIn('gender', [
                     'Non-binary',
@@ -36,7 +36,7 @@ class YouthInfoController extends Controller
             ->get();
 
         $ages =  YouthInfo::select('age', DB::raw('COUNT(*) as count'))
-            ->whereIn('age', [range(15, 30)])
+            ->whereIn('age', range(15, 30))
             ->groupBy('age')
             ->orderBy('age')
             ->get();
@@ -52,7 +52,7 @@ class YouthInfoController extends Controller
             ->orderBy('civilStatus')
             ->get();
 
-        $religions =  YouthInfo::select('religion', DB::raw('COUNT(*) as count'))
+        $religions =  YouthInfo::select('religion as name', DB::raw('COUNT(*) as value'))
             ->whereIn('religion', [
                 'Islam',
                 'Christianity',
@@ -70,7 +70,7 @@ class YouthInfoController extends Controller
             'sexes' => $sex,
             'genders' => $gender,
             'civilStats' => $civilStats,
-            'religionsd' => $religions,
+            'religions' => $religions,
             'ages' => $ages
         ]);
     }
