@@ -16,67 +16,37 @@ class YouthInfoController extends Controller
      */
     public function getInfoData()
     {
-
-        $yt = YouthUser::select('youthType as name', DB::raw('COUNT(*) as value'))
-            ->whereIn('youthType', ['ISY', 'OSY'])
-            ->groupBy('youthType')
+        $yt = YouthUser::select(DB::raw("LOWER(youthType) as name"), DB::raw('COUNT(*) as value'))
+            ->whereRaw("LOWER(youthType) IN ('isy', 'osy')")
+            ->groupBy('name')
             ->get();
 
-        $sex = YouthInfo::select('sex as name', DB::raw('COUNT(*) as value'))
-            ->whereIn('sex', ['Male', 'Female'])
-            ->groupBy('sex')
+        $sex = YouthInfo::select(DB::raw("LOWER(sex) as name"), DB::raw('COUNT(*) as value'))
+            ->whereRaw("LOWER(sex) IN ('male', 'female')")
+            ->groupBy('name')
             ->get();
 
+        $gender = YouthInfo::select(DB::raw("COALESCE(NULLIF(LOWER(gender), ''), 'not-specified') as name"), DB::raw('COUNT(*) as value'))
+            ->whereRaw("LOWER(gender) IN ('non-binary', 'transgender', 'agender', 'bigender', 'others') OR gender IS NULL OR gender = ''")
+            ->groupBy('name')
+            ->get();
 
-
-        $gender = YouthInfo::select('gender', DB::raw('COUNT(*) as value'))
-            ->where(function ($query) {
-                $query->whereIn('gender', [
-                    'Non-binary',
-                    'Transgender',
-                    'Agender',
-                    'Bigender',
-                    'Others'
-                ])->orWhereNull('gender');
-            })
-            ->groupBy('gender')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'name' => $item->gender ?? 'Not-specified',
-                    'value' => $item->value,
-                ];
-            });
-
-        $ages =  YouthInfo::select('age', DB::raw('COUNT(*) as count'))
+        $ages = YouthInfo::select('age', DB::raw('COUNT(*) as count'))
             ->whereIn('age', range(15, 30))
             ->groupBy('age')
             ->orderBy('age')
             ->get();
 
-        $civilStats =  YouthInfo::select('civilStatus as name', DB::raw('COUNT(*) as value'))
-            ->whereIn('civilStatus', [
-                'Single',
-                'Married',
-                'Divorce',
-                'Outside-marriage',
-            ])
-            ->groupBy('civilStatus')
-            ->orderBy('civilStatus')
+        $civilStats = YouthInfo::select(DB::raw("LOWER(civilStatus) as name"), DB::raw('COUNT(*) as value'))
+            ->whereRaw("LOWER(civilStatus) IN ('single', 'married', 'divorce', 'outside-marriage')")
+            ->groupBy('name')
+            ->orderBy('name')
             ->get();
 
-        $religions =  YouthInfo::select('religion as name', DB::raw('COUNT(*) as value'))
-            ->whereIn('religion', [
-                'Islam',
-                'Christianity',
-                'Judaism',
-                'Buddhism',
-                'Hinduism',
-                'Atheism',
-                'Others',
-            ])
-            ->groupBy('religion')
-            ->orderBy('religion')
+        $religions = YouthInfo::select(DB::raw("LOWER(religion) as name"), DB::raw('COUNT(*) as value'))
+            ->whereRaw("LOWER(religion) IN ('islam', 'christianity', 'judaism', 'buddhism', 'hinduism', 'atheism', 'others')")
+            ->groupBy('name')
+            ->orderBy('name')
             ->get();
 
         return response()->json([

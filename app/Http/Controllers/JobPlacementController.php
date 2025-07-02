@@ -30,13 +30,14 @@ class JobPlacementController extends Controller
         });
 
         $results = DB::table('youth_users')
-            ->leftJoin('job_supports', 'youth_users.id', '=', 'job_supports.youth_user_id')
-            ->join('youth_infos', 'youth_infos.youth_user_id', '=', 'youth_users.id') 
+            ->rightJoin('job_supports', 'youth_users.id', '=', 'job_supports.youth_user_id')
+            ->join('youth_infos', 'youth_infos.youth_user_id', '=', 'youth_users.id')
             ->where(function ($query) use ($search) {
                 $query->where('youth_infos.fname', 'LIKE', '%' . $search . '%')
                     ->orWhere('youth_infos.mname', 'LIKE', '%' . $search . '%')
                     ->orWhere('youth_infos.lname', 'LIKE', '%' . $search . '%');
             })
+            ->groupBy('job_supports.id')
             ->orderBy("youth_infos.$sortBy", 'ASC')
             ->select(
                 'youth_infos.youth_user_id',
@@ -47,6 +48,7 @@ class JobPlacementController extends Controller
                 'youth_infos.address',
 
                 'youth_users.skills',
+                'job_supports.id',
                 'youth_users.youthType',
                 'job_supports.task',
                 'job_supports.amountToPay',
