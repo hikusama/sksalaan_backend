@@ -69,7 +69,7 @@ class YouthUserController extends Controller
                         $q->whereNull('user_id');
                     });
             })
-            ->orderBy($sortBy, 'ASC')
+            ->orderBy($sortBy, 'DESC')
             ->with([
                 'yUser',
                 'yUser.educbg',

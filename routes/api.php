@@ -50,7 +50,7 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
     Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
     Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
-    Route::put('/payYouth/{jobPlacement}', [JobPlacementController::class, 'payYouth']);
+    Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
     Route::post('/logout-web', function (Request $request){
         Auth::guard('web')->logout();

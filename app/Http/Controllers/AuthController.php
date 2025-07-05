@@ -185,7 +185,7 @@ class AuthController extends Controller
         $results = SkOfficial::where(function ($query) use ($search) {
             $query->where('name', 'LIKE', '%' . $search . '%');
         })
-            ->orderBy('name', "ASC")
+            ->orderBy('name', "DESC")
             ->with([
                 'user',
             ])

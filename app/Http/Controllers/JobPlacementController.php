@@ -38,7 +38,7 @@ class JobPlacementController extends Controller
                     ->orWhere('youth_infos.lname', 'LIKE', '%' . $search . '%');
             })
             ->groupBy('job_supports.id')
-            ->orderBy("youth_infos.$sortBy", 'ASC')
+            ->orderBy("youth_infos.$sortBy", 'DESC')
             ->select(
                 'youth_infos.youth_user_id',
                 'youth_infos.fname',
@@ -123,7 +123,7 @@ class JobPlacementController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%');
         })
-            ->orderBy($sortBy, 'ASC')
+            ->orderBy($sortBy, 'DESC')
             ->with('yUser')
             ->addSelect([
                 'job_supports_count' => DB::table('job_supports')
@@ -171,9 +171,12 @@ class JobPlacementController extends Controller
         ]);
     }
 
-    public function payYouth(Request $request, Job_support $jobPlacement)
+    public function payYouth(Request $request)
     {
-        $job = Job_support::findOrFail($jobPlacement->id);
+        $job = Job_support::findOrFail($request->input('id'));
+        $request->validate([
+            'date' => 'required:date_format:Y-m-d|before_or_equal:today',
+        ]);
         $job->paid_at =  $request->input('date');
         $job->save();
         return '';
