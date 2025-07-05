@@ -45,12 +45,13 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
     Route::delete('/deleteskaccount/{id}', [AuthController::class, 'destroy'])->middleware('auth:sanctum');;
     Route::post('/searchSkOfficial', [AuthController::class, 'searchSkOfficial']);
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
     Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
     Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
-    Route::post('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
+    Route::put('/payYouth/{jobPlacement}', [JobPlacementController::class, 'payYouth']);
+    Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
     Route::post('/logout-web', function (Request $request){
         Auth::guard('web')->logout();
         $request->session()->invalidate();

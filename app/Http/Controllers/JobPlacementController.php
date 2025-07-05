@@ -162,12 +162,20 @@ class JobPlacementController extends Controller
         ]);
     }
 
-    public function deleteJobRecord(Job_support $jobPlacement){
+    public function deleteJobRecord(Job_support $jobPlacement)
+    {
         Job_support::findOrFail($jobPlacement->id);
         $jobPlacement->delete();
         return response()->json([
             'message' => "Deleted successfully..."
         ]);
+    }
 
+    public function payYouth(Request $request, Job_support $jobPlacement)
+    {
+        $job = Job_support::findOrFail($jobPlacement->id);
+        $job->paid_at =  $request->input('date');
+        $job->save();
+        return '';
     }
 }
