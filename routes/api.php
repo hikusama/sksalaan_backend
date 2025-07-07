@@ -61,6 +61,7 @@ Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->group(function ()
         ]);
     });
 });
+Route::put('/bulkInsert', [JobPlacementController::class, 'bulkInsert']);
 
 Route::post('/registerYouth', [YouthUserController::class, 'registerYouth']);
 
