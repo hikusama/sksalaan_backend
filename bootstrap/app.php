@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->group('api', [
+            \App\Http\Middleware\HandleCors::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
