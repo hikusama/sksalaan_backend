@@ -91,6 +91,7 @@ class AuthController extends Controller
 
 
 
+
     public function loginAdmin(Request $request)
     {
         $request->validate([
@@ -116,7 +117,9 @@ class AuthController extends Controller
             ], 403);
         }
 
-        Auth::login($user);
+        Auth::login($user);  
+
+        $request->session()->regenerate();  
 
         $user = $user->load('admin');
 

@@ -7,13 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\CheckAdmin;
 
-Route::middleware(['web', 'auth:sanctum', CheckAdmin::class])->get('/user', function (Request $request) {
-    $user = $request->user()->load('admin');
-    return [
-        'user' => $user,
-    ];
-});
-Route::middleware(['web', 'auth:sanctum'])->get('/userAPI', function (Request $request) {
+
+Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request) {
     $user = $request->user()->load('skofficials');
     return [
         'user' => $user,
@@ -30,9 +25,8 @@ Route::post('/vals4b', [ValidationFormController::class, 'valStep4b']);
 
 
 
-Route::post('/bulkInsert', [YouthUserController::class, function () {
+Route::get('/bulkInsert', [YouthUserController::class, function () {
     return 'Hello';
 }]);
-
 
 Route::post('/loginOfficials', [AuthController::class, 'loginOfficials']);
