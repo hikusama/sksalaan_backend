@@ -151,10 +151,15 @@ class AuthController extends Controller
         if (!empty($errors)) {
             return response()->json(['errors' => $errors], 422);
         }
+        $token = $user->createToken($user->userName);
 
-        $token = $user->createToken($user->userName)->plainTextToken;
+        $user->tokens()->latest()->first()->forceFill([
+            'expires_at' => now()->addHour(),
+        ])->save();
 
-        return response()->json(['token' => $token]);
+        return [
+            'token' => $token->plainTextToken,
+        ];
     }
 
 
