@@ -117,9 +117,9 @@ class AuthController extends Controller
             ], 403);
         }
 
-        Auth::login($user);  
+        Auth::login($user);
 
-        $request->session()->regenerate();  
+        $request->session()->regenerate();
 
         $user = $user->load('admin');
 
@@ -131,47 +131,32 @@ class AuthController extends Controller
 
     public function loginOfficials(Request $request)
     {
-
         $request->validate([
-            'email' => 'required|email|exists:users',
+            'email' => 'required|email|exists:users,email',
             'password' => 'required',
         ]);
 
         $user = User::where('email', $request->email)->first();
 
-
         $errors = [];
 
-        if (!$user) {
-            $errors['email'] = 'Email not Exist.';
-        }
         if (!Hash::check($request->password, $user->password)) {
             $errors['password'] = 'Incorrect Password.';
         }
 
-        if ($errors) {
-            return [
-                'errors' => [
-                    ...$errors
-                ]
-            ];
+        if ($user->role !== 'SKOfficial') {
+            $errors['auth'] = 'Unauthorized';
         }
 
-        if (!$user->role != 'SKOfficial') {
-            return [
-                'errors' => [
-                    'auth' => 'Unauthorize'
-                ]
-            ];
+        if (!empty($errors)) {
+            return response()->json(['errors' => $errors], 422);
         }
 
-        $token = $user->createToken($user->userName);
+        $token = $user->createToken($user->userName)->plainTextToken;
 
-
-        return [
-            'token' => $token->plainTextToken,
-        ];
+        return response()->json(['token' => $token]);
     }
+
 
 
     public function searchSkOfficial(Request $request)

@@ -5,7 +5,6 @@ use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\YouthUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Middleware\CheckAdmin;
 
 
 Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request) {
