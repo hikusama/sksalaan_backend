@@ -11,5 +11,9 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::call(function () {
-    Log::info('Scheduler ran at ' . now());
-})->everyMinute();
+    DB::table('personal_access_tokens')
+        ->whereNotNull('expires_at')
+        ->where('expires_at', '<', now())
+        ->delete();
+    Log::info('[TEST] Scheduler ran at: ' . now());
+})->daily();
