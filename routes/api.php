@@ -8,11 +8,19 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request) {
+    $token = $request->user()->currentAccessToken();
+
+    if ($token && $token->expires_at && now()->greaterThan($token->expires_at)) {
+        $token->delete(); 
+        return response()->json(['message' => 'Token expired'], 401);
+    }
     $user = $request->user()->load('skofficials');
+
     return [
         'user' => $user,
     ];
 });
+
 
 
 Route::post('/vals1', [ValidationFormController::class, 'valStep1']);
