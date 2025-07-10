@@ -16,6 +16,12 @@ class ValidationFormController extends Controller
             'lastname' => 'required|max:60',
             'sex' => 'required|in:Male,Female',
             'gender' => 'nullable|max:40',
+            'dateOfBirth' => [
+                'required',
+                'date_format:Y-m-d',
+                'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
+                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),
+            ],
             'age' => 'required|integer|between:15,30',
             'address' => 'required|max:100',
         ]);
@@ -30,12 +36,6 @@ class ValidationFormController extends Controller
             'youthType' => 'required|max:100',
             'skills' => 'required|array',
             'skills.*' => 'string|max:100',
-            'dateOfBirth' => [
-                'required',
-                'date_format:Y-m-d',
-                'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
-                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),  
-            ],
             'placeOfBirth' => 'required|max:100',
             'noOfChildren' => 'nullable|max:100',
             'contactNo' => 'required|digits:10',
