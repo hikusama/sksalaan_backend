@@ -14,6 +14,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class YouthUserController extends Controller
@@ -57,7 +58,10 @@ class YouthUserController extends Controller
         $results = YouthInfo::where(function ($query) use ($search) {
             $query->where('fname', 'LIKE', '%' . $search . '%')
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%');
+                ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                ->orWhere('batchNo', 'LIKE', '%' . $search . '%');
+        })->orWhereHas('yUser',  function ($query) use ($search) {
+            $query->where('batchNo', 'LIKE', '%' . $search . '%');
         })
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
@@ -123,7 +127,9 @@ class YouthUserController extends Controller
                     $renamedFields[$key] = $value;
                 }
             }
+            $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
 
+            $renamedFields['batchNo'] = $batchNo;
             $renamedFields['user_id'] = $request->user()->id;
             $yUser = YouthUser::create($renamedFields);
 
@@ -208,6 +214,8 @@ class YouthUserController extends Controller
                 }
             }
             // $renamedFields['user_id'] = null;
+            $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
+            $renamedFields['batchNo'] = $batchNo;
             $yUser = YouthUser::create($renamedFields);
 
             $fields2 = $this->validateYouthInfo($request);
@@ -287,8 +295,9 @@ class YouthUserController extends Controller
                 'required',
                 'date_format:Y-m-d',
                 'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
-                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),  
-            ],            'placeOfBirth' => 'required|max:100',
+                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),
+            ],
+            'placeOfBirth' => 'required|max:100',
             'contactNo' => 'required|max:10|min:10',
             'height' => 'required|integer|max:300',
             'weight' => 'required|integer|max:200',
@@ -310,6 +319,21 @@ class YouthUserController extends Controller
             }
         }
         return $renamedFields;
+    }
+
+
+    public function show(YouthUser $youth)
+    {
+        // $yuser->load('info');
+
+        return [
+            'yuser' => $youth,
+            'info' => $youth->info,
+        ];
+        //         $yuser = YouthUser::with('info')->find($id);
+        // return $yuser->info;
+
+
     }
 
     private function validateEducBG(Request $request)
@@ -354,27 +378,174 @@ class YouthUserController extends Controller
         return false;
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(YouthUser $youth)
+
+
+
+    public function migrateFromMobile(Request $request)
     {
-        // $yuser->load('info');
+        $migrateData = $request->all(); // array of youth entries
+        $attempted = count($migrateData);
+        $failed = [];
+        $submitted = [];
+        $readyData = [];
 
-        return [
-            'yuser' => $youth,
-            'info' => $youth->info,
-        ];
-        //         $yuser = YouthUser::with('info')->find($id);
-        // return $yuser->info;
+        foreach ($migrateData as $data) {
+            try {
+                $userValidator = Validator::make($data['user'], [
+                    'youthType' => 'required|max:50',
+                    'skills' => 'required|max:100',
+                ]);
+                if ($userValidator->fails()) {
+                    throw new \Exception('User validation failed');
+                }
 
+                $infoRequest = new Request($data['info']);
+                $validatedInfo = $this->validateYouthInfoRaw($infoRequest);
 
+                $educRequest = new Request(['educBg' => $data['educBG']]);
+                $validatedEduc = $this->validateEducBGRaw($educRequest);
+
+                $civicRequest = new Request(['civic' => $data['civic']]);
+                $validatedCivic = $this->validateCivicInvolvementRaw($civicRequest);
+
+                $readyData[] = [
+                    'user' => $data['user'],
+                    'info' => $validatedInfo,
+                    'educBG' => $validatedEduc ?: [],
+                    'civic' => $validatedCivic ?: [],
+                ];
+
+                $submitted[] = $data['user']['id'] ?? null;
+            } catch (\Throwable $th) {
+                $failed[] = $data['user']['id'] ?? null;
+            }
+        }
+
+        $uuid = $request->user()->id;
+        DB::beginTransaction();
+
+        try {
+            foreach ($readyData as $youth) {
+                unset($youth['user']['id']);
+
+                $userData = array_merge($youth['user'], ['user_id' => $uuid]);
+                $youth_user_id = DB::table('youth_users')->insertGetId($userData);
+
+                $infoData = array_merge($youth['info'], ['youth_user_id' => $youth_user_id]);
+                DB::table('youth_infos')->insert($infoData);
+
+                foreach ($youth['educBG'] as $edu) {
+                    DB::table('educ_b_g_s')->insert(array_merge($edu, ['youth_user_id' => $youth_user_id]));
+                }
+
+                foreach ($youth['civic'] as $civic) {
+                    DB::table('civic_involvements')->insert(array_merge($civic, ['youth_user_id' => $youth_user_id]));
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Migration failed.',
+                'error' => $th->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'attempted' => $attempted,
+            'submitted' => $submitted,
+            'failed' => $failed,
+        ], 200);
+    }
+    public function validateYouthInfoRaw(Request $request)
+    {
+        $request['height'] = (int)$request->input('height');
+        $request['weight'] = (int)$request->input('weight');
+        $request['age'] = (int)$request->input('age');
+
+        $fields = $request->validate([
+            'fname' => 'required|max:60',
+            'mname' => 'required|max:60',
+            'lname' => 'required|max:60',
+            'sex' => 'required|in:Male,Female',
+            'gender' => 'nullable|max:40',
+            'age' => 'required|integer|between:15,30',
+            'address' => 'required|max:100',
+            'dateOfBirth' => [
+                'required',
+                'date_format:Y-m-d',
+                'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
+                'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),
+            ],
+            'placeOfBirth' => 'required|max:100',
+            'contactNo' => 'required|max:10|min:10',
+            'height' => 'required|integer|max:300',
+            'weight' => 'required|integer|max:200',
+            'religion' => 'required|max:100',
+            'occupation' => 'nullable|max:100',
+            'civilStatus' => 'required|max:100',
+            'noOfChildren' => 'nullable|max:30',
+        ]);
+
+        return $fields;
+    }
+
+    private function validateEducBGRaw(Request $request)
+    {
+
+        if (collect($request->educBg)->filter(
+            fn($item) =>
+            !empty($item['level']) ||
+                !empty($item['nameOfSchool']) ||
+                !empty($item['periodOfAttendance']) ||
+                !empty($item['yearGraduate'])
+        )->isNotEmpty()) {
+            return $request->validate([
+                'educBg' => 'array|min:1',
+                'educBg.*.level' => 'required|string|max:255',
+                'educBg.*.nameOfSchool' => 'required|string|max:255',
+                'educBg.*.periodOfAttendance' => 'required|string|max:255',
+                'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+            ]);
+        }
+        return false;
+    }
+
+    private function validateCivicInvolvementRaw(Request $request)
+    {
+        if (collect($request->civic)->filter(function ($item) {
+            return !empty($item['nameOfOrganization']) ||
+                !empty($item['addressOfOrganization']) ||
+                !empty($item['start']) ||
+                !empty($item['end']) ||
+                !empty($item['yearGraduated']);
+        })->isNotEmpty()) {
+            return $request->validate([
+                'civic' => 'array|min:1',
+                'civic.*.nameOfOrganization' => 'required|string|max:255',
+                'civic.*.addressOfOrganization' => 'required|string|max:255',
+                'civic.*.start' => 'required|date_format:Y-m-d',
+                'civic.*.end' => 'required|string|max:255',
+                'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
+            ]);
+        }
+        return false;
+    }
+
+    function generateUnique7DigitCode(string $table, string $column): int
+    {
+        do {
+            $code = mt_rand(1000000, 9999999);
+        } while (DB::table($table)->where($column, $code)->exists());
+
+        return $code;
     }
 
 
-    /**
-     * Update the specified resource in storage.
-     */
+
+
+
     public function youthApprove(Request $request, YouthUser $youth)
     {
         $user = User::findOrFail($request->input('user_id'));

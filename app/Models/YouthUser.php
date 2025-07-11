@@ -11,6 +11,7 @@ class YouthUser extends Model
     use HasFactory;
     protected $fillable = [
         'user_id',
+        'batchNo',
         'youthType',
         'skills',
     ];

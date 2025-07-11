@@ -11,7 +11,7 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     $token = $request->user()->currentAccessToken();
 
     if ($token && $token->expires_at && now()->greaterThan($token->expires_at)) {
-        $token->delete(); 
+        $token->delete();
         return response()->json(['message' => 'Token expired'], 401);
     }
     $user = $request->user()->load('skofficials');
@@ -29,6 +29,7 @@ Route::post('/vals3', [ValidationFormController::class, 'valStep3']);
 Route::post('/vals4', [ValidationFormController::class, 'valStep4']);
 Route::post('/vals3b', [ValidationFormController::class, 'valStep3b']);
 Route::post('/vals4b', [ValidationFormController::class, 'valStep4b']);
+Route::middleware(['auth:sanctum'])->post('/migrate', [YouthUserController::class, 'migrateFromMobile']);
 
 
 
