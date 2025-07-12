@@ -14,6 +14,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -324,16 +325,11 @@ class YouthUserController extends Controller
 
     public function show(YouthUser $youth)
     {
-        // $yuser->load('info');
 
         return [
             'yuser' => $youth,
             'info' => $youth->info,
         ];
-        //         $yuser = YouthUser::with('info')->find($id);
-        // return $yuser->info;
-
-
     }
 
     private function validateEducBG(Request $request)
@@ -383,7 +379,9 @@ class YouthUserController extends Controller
 
     public function migrateFromMobile(Request $request)
     {
-        $migrateData = $request->all(); // array of youth entries
+        $migrateData = $request->all();
+        Log::info('migra: ' . json_encode($request->all()));
+
         $attempted = count($migrateData);
         $failed = [];
         $submitted = [];
@@ -417,32 +415,54 @@ class YouthUserController extends Controller
 
                 $submitted[] = $data['user']['id'] ?? null;
             } catch (\Throwable $th) {
+                Log::info('irur: ' . $th->getMessage());
+
                 $failed[] = $data['user']['id'] ?? null;
             }
         }
 
         $uuid = $request->user()->id;
+        // $uuid = 2;
         DB::beginTransaction();
-
         try {
+
             foreach ($readyData as $youth) {
                 unset($youth['user']['id']);
+                $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
 
                 $userData = array_merge($youth['user'], ['user_id' => $uuid]);
+                $userData = array_merge($youth['user'], ['batchNo' => $batchNo]);
                 $youth_user_id = DB::table('youth_users')->insertGetId($userData);
 
                 $infoData = array_merge($youth['info'], ['youth_user_id' => $youth_user_id]);
+
                 DB::table('youth_infos')->insert($infoData);
 
-                foreach ($youth['educBG'] as $edu) {
-                    DB::table('educ_b_g_s')->insert(array_merge($edu, ['youth_user_id' => $youth_user_id]));
-                }
+                if (!empty($youth['educBG']) && is_array($youth['educBG'])) {
 
-                foreach ($youth['civic'] as $civic) {
-                    DB::table('civic_involvements')->insert(array_merge($civic, ['youth_user_id' => $youth_user_id]));
+                    foreach ($youth['educBG'] as $edu) {
+                        if (is_array($edu)) {
+                            foreach ($edu as $lud) {
+                                DB::table('educ_b_g_s')->insert(array_merge($lud, ['youth_user_id' => $youth_user_id]));
+                            }
+                        }
+                    }
+                }
+                Log::info('#[  2  ]: ');
+                if (!empty($youth['civic']) && is_array($youth['civic'])) {
+                    foreach ($youth['civic'] as $civic) {
+                        Log::info('start5: ');
+                        if (is_array($civic)) {
+                            foreach ($civic as $lud) {
+                                DB::table('civic_involvements')->insert(array_merge($lud, ['youth_user_id' => $youth_user_id]));
+                            }
+                        }
+                    }
                 }
             }
+            Log::info('end: ');
 
+            // DB::rollBack();
             DB::commit();
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -451,12 +471,12 @@ class YouthUserController extends Controller
                 'error' => $th->getMessage(),
             ], 500);
         }
-
-        return response()->json([
+        $res = [
             'attempted' => $attempted,
             'submitted' => $submitted,
             'failed' => $failed,
-        ], 200);
+        ];
+        return response()->json($res, 200);
     }
     public function validateYouthInfoRaw(Request $request)
     {
@@ -493,8 +513,9 @@ class YouthUserController extends Controller
 
     private function validateEducBGRaw(Request $request)
     {
+        $educBg = collect($request->educBg ?? []);
 
-        if (collect($request->educBg)->filter(
+        if ($educBg->filter(
             fn($item) =>
             !empty($item['level']) ||
                 !empty($item['nameOfSchool']) ||
@@ -502,19 +523,22 @@ class YouthUserController extends Controller
                 !empty($item['yearGraduate'])
         )->isNotEmpty()) {
             return $request->validate([
-                'educBg' => 'array|min:1',
                 'educBg.*.level' => 'required|string|max:255',
                 'educBg.*.nameOfSchool' => 'required|string|max:255',
                 'educBg.*.periodOfAttendance' => 'required|string|max:255',
                 'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
             ]);
         }
+
         return false;
     }
 
+
     private function validateCivicInvolvementRaw(Request $request)
     {
-        if (collect($request->civic)->filter(function ($item) {
+        $civic = collect($request->civic ?? []);
+
+        if ($civic->filter(function ($item) {
             return !empty($item['nameOfOrganization']) ||
                 !empty($item['addressOfOrganization']) ||
                 !empty($item['start']) ||
@@ -522,7 +546,6 @@ class YouthUserController extends Controller
                 !empty($item['yearGraduated']);
         })->isNotEmpty()) {
             return $request->validate([
-                'civic' => 'array|min:1',
                 'civic.*.nameOfOrganization' => 'required|string|max:255',
                 'civic.*.addressOfOrganization' => 'required|string|max:255',
                 'civic.*.start' => 'required|date_format:Y-m-d',
@@ -530,8 +553,10 @@ class YouthUserController extends Controller
                 'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
             ]);
         }
+
         return false;
     }
+
 
     function generateUnique7DigitCode(string $table, string $column): int
     {

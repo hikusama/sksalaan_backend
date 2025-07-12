@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
@@ -131,6 +132,8 @@ class AuthController extends Controller
 
     public function loginOfficials(Request $request)
     {
+        Log::info('account: ' . json_encode($request->all()));
+
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'password' => 'required',
