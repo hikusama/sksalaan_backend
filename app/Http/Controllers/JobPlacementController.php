@@ -47,6 +47,7 @@ class JobPlacementController extends Controller
                 'youth_infos.lname',
                 'youth_infos.age',
                 'youth_infos.address',
+                'job_supports.created_at',
 
                 'youth_users.skills',
                 'job_supports.id',

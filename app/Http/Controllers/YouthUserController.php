@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Middleware\CheckAdmin;
+use App\Models\Bulk_logger;
 use App\Models\civicInvolvement;
 use App\Models\EducBG;
 use App\Models\User;
@@ -35,6 +36,12 @@ class YouthUserController extends Controller
     public function index()
     {
         // return YouthUser::all();
+    }
+
+
+    public function bulkGet()
+    {
+        return Bulk_logger::all();
     }
 
 
@@ -378,7 +385,6 @@ class YouthUserController extends Controller
 
 
         $migrateData = $request->all();
-        Log::info('migra: ' . json_encode($request->all()));
 
         $attempted = count($migrateData);
         $failed = [];
@@ -413,7 +419,6 @@ class YouthUserController extends Controller
 
                 $submitted[] = $data['user']['id'] ?? null;
             } catch (\Throwable $th) {
-                Log::info('irur: ' . $th->getMessage());
 
                 $failed[] = $data['user']['id'] ?? null;
             }
@@ -462,6 +467,12 @@ class YouthUserController extends Controller
 
             // DB::rollBack();
             DB::commit();
+
+            Bulk_logger::create([
+                'user_id' => $uuid,
+                'batchNo' => $batchNo,
+            ]);
+
         } catch (\Throwable $th) {
             DB::rollBack();
             return response()->json([

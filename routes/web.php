@@ -32,6 +32,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
     Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
+    Route::get('/bulkGet', [YouthUserController::class, 'bulkGet']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();
