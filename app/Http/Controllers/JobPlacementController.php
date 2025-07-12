@@ -8,6 +8,7 @@ use App\Models\YouthUser;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class JobPlacementController extends Controller
 {
@@ -165,6 +166,8 @@ class JobPlacementController extends Controller
     public function deleteJobRecord(Job_support $jobPlacement)
     {
         Job_support::findOrFail($jobPlacement->id);
+        Log::info('asdasd-- ' . $jobPlacement);
+
         $jobPlacement->delete();
         return response()->json([
             'message' => "Deleted successfully..."

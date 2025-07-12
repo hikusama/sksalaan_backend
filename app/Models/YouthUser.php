@@ -14,6 +14,7 @@ class YouthUser extends Model
         'batchNo',
         'youthType',
         'skills',
+        'created_at',
     ];
 
 

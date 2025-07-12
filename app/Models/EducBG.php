@@ -15,6 +15,7 @@ class EducBG extends Model
         'level',
         'nameOfSchool',
         'periodOfAttendance',
+        'created_at',
         'yearGraduate',
     ];
 

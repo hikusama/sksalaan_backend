@@ -59,21 +59,17 @@ class YouthUserController extends Controller
         $results = YouthInfo::where(function ($query) use ($search) {
             $query->where('fname', 'LIKE', '%' . $search . '%')
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%')
-                ->orWhere('batchNo', 'LIKE', '%' . $search . '%');
-        })->orWhereHas('yUser',  function ($query) use ($search) {
-            $query->where('batchNo', 'LIKE', '%' . $search . '%');
+                ->orWhere('lname', 'LIKE', '%' . $search . '%');
+        })->when(!is_null($typeId), function ($query) use ($typeId) {
+            $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
+            return $linked
+                ? $query->whereHas('yUser', function ($q) {
+                    $q->whereNotNull('user_id');
+                })
+                : $query->whereHas('yUser', function ($q) {
+                    $q->whereNull('user_id');
+                });
         })
-            ->when(!is_null($typeId), function ($query) use ($typeId) {
-                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
-                return $linked
-                    ? $query->whereHas('yUser', function ($q) {
-                        $q->whereNotNull('user_id');
-                    })
-                    : $query->whereHas('yUser', function ($q) {
-                        $q->whereNull('user_id');
-                    });
-            })
             ->orderBy($sortBy, 'DESC')
             ->with([
                 'yUser',
@@ -379,6 +375,8 @@ class YouthUserController extends Controller
 
     public function migrateFromMobile(Request $request)
     {
+
+
         $migrateData = $request->all();
         Log::info('migra: ' . json_encode($request->all()));
 
@@ -420,15 +418,15 @@ class YouthUserController extends Controller
                 $failed[] = $data['user']['id'] ?? null;
             }
         }
-
         $uuid = $request->user()->id;
+
         // $uuid = 2;
         DB::beginTransaction();
         try {
 
+            $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
             foreach ($readyData as $youth) {
                 unset($youth['user']['id']);
-                $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
 
                 $userData = array_merge($youth['user'], ['user_id' => $uuid]);
                 $userData = array_merge($youth['user'], ['batchNo' => $batchNo]);
@@ -506,6 +504,7 @@ class YouthUserController extends Controller
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
             'noOfChildren' => 'nullable|max:30',
+            'created_at' => 'nullable|date_format:Y-m-d',
         ]);
 
         return $fields;
@@ -527,6 +526,7 @@ class YouthUserController extends Controller
                 'educBg.*.nameOfSchool' => 'required|string|max:255',
                 'educBg.*.periodOfAttendance' => 'required|string|max:255',
                 'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+                'educBg.*.created_at' => 'nullable|date_format:Y-m-d',
             ]);
         }
 
@@ -551,6 +551,7 @@ class YouthUserController extends Controller
                 'civic.*.start' => 'required|date_format:Y-m-d',
                 'civic.*.end' => 'required|string|max:255',
                 'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
+                'civic.*.created_at' => 'nullable|date_format:Y-m-d',
             ]);
         }
 
@@ -571,7 +572,7 @@ class YouthUserController extends Controller
 
 
 
-    public function youthApprove(Request $request, YouthUser $youth)
+    public function youthApprove(Request $request)
     {
         $user = User::findOrFail($request->input('user_id'));
         $yUser = YouthUser::findOrFail($request->input('youthid'));
@@ -580,8 +581,13 @@ class YouthUserController extends Controller
         return 'Success';
     }
 
-    public function update(Request $request, YouthUser $youth)
+
+
+
+    public function update(Request $request, $youth)
     {
+        $youth = YouthUser::findOrFail(18);
+
         $fields = $request->validate([
             'youthType' => 'required|max:255',
             'skillsf' => 'required|max:100',
@@ -690,7 +696,7 @@ class YouthUserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(YouthUser $youth)
+    public function destroy($youth)
     {
         // $msg = 'Something went wrong ';
         // try {
@@ -700,8 +706,18 @@ class YouthUserController extends Controller
         // } catch (\Exception $th) {
         //     $msg .= $th->getMessage();
         // }
-        $youth->delete();
+        $res = '';
+        try {
+            $bye = YouthUser::findOrFail($youth);
+            YouthUser::destroy($bye->id);
+            return response()->json(['message' => 'Deleted successfylly'], 200);
+        } catch (\Throwable $th) {
+            return response()->json(['message' => $th->getMessage()], 404);
+        }
 
-        return response()->json(['message' => 'Deleted successfylly']);
+        var_dump($youth);
+
+        // $youth->delete();
+
     }
 }

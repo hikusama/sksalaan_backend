@@ -27,6 +27,7 @@ class YouthInfo extends Model
         'civilStatus',
         'gender',
         'noOfChildren',
+        'created_at',
     ];
 
     /*

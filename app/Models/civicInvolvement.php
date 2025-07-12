@@ -15,6 +15,7 @@ class civicInvolvement extends Model
         'nameOfOrganization',
         'addressOfOrganization',
         'start',
+        'created_at',
         'end',
         'yearGraduated',
     ];

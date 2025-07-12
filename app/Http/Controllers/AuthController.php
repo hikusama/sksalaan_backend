@@ -224,7 +224,7 @@ class AuthController extends Controller
 
 
 
-    public function destroy(Request $request, SkOfficial $id)
+    public function destroy(Request $request, $id)
     {
         // $msg = 'Something went wrong ';
         // try {
@@ -235,14 +235,16 @@ class AuthController extends Controller
         //     $msg .= $th->getMessage();
         // }
         // $youth->delete();
+        $bye = User::findOrFail($id);
+
         $user = $request->user();
 
         if (!$user) {
             return response()->json(['message' => $user], 401);
         }
 
-        YouthUser::where('id', $id->id)->update(['user_id' => $user->id]);
-        $id->user()->delete();
+        YouthUser::where('id', $bye->id)->update(['user_id' => $user->id]);
+        User::destroy($bye->id);
 
         return response()->json(['message' => 'Deleted successfylly']);
     }
