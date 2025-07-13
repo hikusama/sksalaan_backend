@@ -419,6 +419,7 @@ class YouthUserController extends Controller
 
                 $submitted[] = $data['user']['id'] ?? null;
             } catch (\Throwable $th) {
+                Log::info("error validation" . $th->getMessage());
 
                 $failed[] = $data['user']['id'] ?? null;
             }
@@ -433,8 +434,10 @@ class YouthUserController extends Controller
             foreach ($readyData as $youth) {
                 unset($youth['user']['id']);
 
-                $userData = array_merge($youth['user'], ['user_id' => $uuid]);
-                $userData = array_merge($youth['user'], ['batchNo' => $batchNo]);
+                $userData = array_merge($youth['user'], [
+                    'user_id' => $uuid,
+                    'batchNo' => $batchNo,
+                ]);
                 $youth_user_id = DB::table('youth_users')->insertGetId($userData);
 
                 $infoData = array_merge($youth['info'], ['youth_user_id' => $youth_user_id]);
@@ -451,10 +454,8 @@ class YouthUserController extends Controller
                         }
                     }
                 }
-                Log::info('#[  2  ]: ');
                 if (!empty($youth['civic']) && is_array($youth['civic'])) {
                     foreach ($youth['civic'] as $civic) {
-                        Log::info('start5: ');
                         if (is_array($civic)) {
                             foreach ($civic as $lud) {
                                 DB::table('civic_involvements')->insert(array_merge($lud, ['youth_user_id' => $youth_user_id]));
@@ -463,7 +464,6 @@ class YouthUserController extends Controller
                     }
                 }
             }
-            Log::info('end: ');
 
             // DB::rollBack();
             DB::commit();
@@ -472,8 +472,8 @@ class YouthUserController extends Controller
                 'user_id' => $uuid,
                 'batchNo' => $batchNo,
             ]);
-
         } catch (\Throwable $th) {
+            Log::info("inserting error: " . $th->getMessage());
             DB::rollBack();
             return response()->json([
                 'message' => 'Migration failed.',
@@ -503,6 +503,7 @@ class YouthUserController extends Controller
             'address' => 'required|max:100',
             'dateOfBirth' => [
                 'required',
+                'date',
                 'date_format:Y-m-d',
                 'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
                 'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),
@@ -515,7 +516,7 @@ class YouthUserController extends Controller
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
             'noOfChildren' => 'nullable|max:30',
-            'created_at' => 'nullable|date_format:Y-m-d',
+            'created_at' => 'nullable|date|date_format:Y-m-d',
         ]);
 
         return $fields;
@@ -537,7 +538,7 @@ class YouthUserController extends Controller
                 'educBg.*.nameOfSchool' => 'required|string|max:255',
                 'educBg.*.periodOfAttendance' => 'required|string|max:255',
                 'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
-                'educBg.*.created_at' => 'nullable|date_format:Y-m-d',
+                'educBg.*.created_at' => 'nullable|date|date_format:Y-m-d',
             ]);
         }
 
@@ -562,7 +563,7 @@ class YouthUserController extends Controller
                 'civic.*.start' => 'required|date_format:Y-m-d',
                 'civic.*.end' => 'required|string|max:255',
                 'civic.*.yearGraduated' => 'required|integer|between:1995,2100',
-                'civic.*.created_at' => 'nullable|date_format:Y-m-d',
+                'civic.*.created_at' => 'nullable|date|date_format:Y-m-d',
             ]);
         }
 

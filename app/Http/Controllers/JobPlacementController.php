@@ -110,6 +110,7 @@ class JobPlacementController extends Controller
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
         $sortBy = $request->input('sortBy', 'fname');
+        $typeId = $request->input('typeId');
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
         if (!in_array($sortBy, $allowedFilters)) {
@@ -131,7 +132,16 @@ class JobPlacementController extends Controller
                 'job_supports_count' => DB::table('job_supports')
                     ->selectRaw('COUNT(*)')
                     ->whereColumn('job_supports.youth_user_id', 'youth_infos.youth_user_id')
-            ])
+            ])->when(!is_null($typeId), function ($query) use ($typeId) {
+            $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
+            return $linked
+                ? $query->whereHas('yUser', function ($q) {
+                    $q->whereNotNull('user_id');
+                })
+                : $query->whereHas('yUser', function ($q) {
+                    $q->whereNull('user_id');
+                });
+        })
             ->paginate($perPage)
             ->appends([
                 'q' => $search,
@@ -164,12 +174,11 @@ class JobPlacementController extends Controller
         ]);
     }
 
-    public function deleteJobRecord(Job_support $jobPlacement)
+    public function deleteJobRecord($jobPlacement)
     {
-        Job_support::findOrFail($jobPlacement->id);
-        Log::info('asdasd-- ' . $jobPlacement);
+        $jobPlacement = Job_support::findOrFail($jobPlacement);
 
-        $jobPlacement->delete();
+        Job_support::destroy($jobPlacement->id);
         return response()->json([
             'message' => "Deleted successfully..."
         ]);

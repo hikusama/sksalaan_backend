@@ -20,7 +20,6 @@ class YouthInfoController extends Controller
             ->whereRaw("LOWER(youthType) IN ('isy', 'osy')")
             ->groupBy('name')
             ->get();
-
         $sex = YouthInfo::select(DB::raw("LOWER(sex) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(sex) IN ('male', 'female')")
             ->groupBy('name')
