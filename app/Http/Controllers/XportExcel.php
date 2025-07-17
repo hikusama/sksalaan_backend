@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\YouthUser;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -16,7 +17,7 @@ class XportExcel extends Controller
         $start = $request->input('start');
         $end = $request->input('end');
         if ($end && !$start) {
-            return response()->json(['error' => ['start' => 'Set the start date']], 400);
+            return response()->json(['message' => 'Set the start date'], 400);
         }
 
         $query = YouthUser::with([
@@ -25,10 +26,16 @@ class XportExcel extends Controller
             'civicInvolvement'
         ]);
         $date = 'All';
-        if (($start && $end)||$type == 3) {
+        if ($type == 3) {
+            if (!$start && !$end) {
+                return response()->json(['message' => 'Set all the date'], 400);
+            }
             $query->whereBetween('created_at', [$start, $end]);
             $date = Carbon::parse($start)->format('F j, Y') . ' to ' . Carbon::parse($end)->format('F j, Y');
-        } elseif ($start || $type == 1) {
+        } elseif ($type == 1) {
+            if (!$start) {
+                return response()->json(['message' => 'Set the start date'], 400);
+            }
             $query->whereDate('created_at', $start);
             $date = Carbon::parse($start)->format('F j, Y');
         }
@@ -39,7 +46,7 @@ class XportExcel extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         if ($date == 'All') {
             $sheet->setCellValue('A1', 'All records');
-        }else{
+        } else {
             $sheet->setCellValue('A1', 'Record as of');
             $sheet->setCellValue('B1', $date);
         }
@@ -81,7 +88,7 @@ class XportExcel extends Controller
         foreach ($users as $user) {
             $info = $user->info;
 
-            $sheet->setCellValue("A{$row}", strval($num));
+            $sheet->setCellValueExplicit("A{$row}", strval($num), DataType::TYPE_STRING);
             $sheet->setCellValue("B{$row}", $info ? "{$info->lname}, {$info->fname} {$info->mname}" : 'N/A');
             $sheet->setCellValue("C{$row}", $info->age ?? '');
             $sheet->setCellValue("D{$row}", $info->sex ?? '');
@@ -95,10 +102,10 @@ class XportExcel extends Controller
             $sheet->setCellValue("I{$row}", $info->placeOfBirth ?? '');
             $sheet->setCellValue("J{$row}", $user->youthType ?? '');
             $sheet->setCellValue("K{$row}", $user->skills ?? '');
-            $sheet->setCellValue("L{$row}", $info->contactNo ?? '');
-            $sheet->setCellValue("M{$row}", $info->noOfChildren ?? '');
-            $sheet->setCellValue("N{$row}", strval(($info->height ?? '')));
-            $sheet->setCellValue("O{$row}", strval(($info->weight ?? '')));
+            $sheet->setCellValueExplicit("L{$row}", strval(($info->contactNo ?? '0')), DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("M{$row}", strval(($info->noOfChildren ?? '0')), DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("N{$row}", strval(($info->height ?? '')), DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("O{$row}", strval(($info->weight ?? '')), DataType::TYPE_STRING);
             $sheet->setCellValue("P{$row}", $info->religion ?? '');
             $sheet->setCellValue("Q{$row}", $info->occupation ?? '');
 
@@ -111,7 +118,8 @@ class XportExcel extends Controller
                     $sheet->setCellValue("R{$eRow}", $ebg->level ?? '');
                     $sheet->setCellValue("S{$eRow}", $ebg->nameOfSchool ?? '');
                     $sheet->setCellValue("T{$eRow}", $ebg->periodOfAttendance ?? '');
-                    $sheet->setCellValue("U{$eRow}", $ebg->yearGraduate ?? '');
+                    $sheet->setCellValueExplicit("U{$eRow}", strval(($ebg->yearGraduate ?? '')), DataType::TYPE_STRING);
+
                     $eRow++;
                 }
                 $maxRows = max($maxRows, $eRow - $startRow);
@@ -125,7 +133,8 @@ class XportExcel extends Controller
                     $start = $civic->start ?? '';
                     $end = $civic->end ?? '';
                     $sheet->setCellValue("Y{$cRow}", trim("{$start} - {$end}"));
-                    $sheet->setCellValue("Z{$cRow}", $civic->yearGraduated ?? '');
+                    $sheet->setCellValueExplicit("Z{$cRow}", strval(($civic->yearGraduated ?? '')), DataType::TYPE_STRING);
+
                     $cRow++;
                 }
                 $maxRows = max($maxRows, $cRow - $startRow);
@@ -134,12 +143,15 @@ class XportExcel extends Controller
             $row += $maxRows;
             $num++;
         }
+        foreach (range('A', 'Z') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
 
 
         $writer = new Xlsx($spreadsheet);
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
-        }, 'youth_data_export.xlsx');
+        }, Carbon::now()->format('m-d-y_h:ia') . 'Youth.xlsx');
     }
 }
