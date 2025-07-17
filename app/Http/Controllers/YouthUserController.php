@@ -597,7 +597,7 @@ class YouthUserController extends Controller
 
     public function update(Request $request, $youth)
     {
-        $youth = YouthUser::findOrFail(18);
+        $youth = YouthUser::findOrFail($youth);
 
         $fields = $request->validate([
             'youthType' => 'required|max:255',
