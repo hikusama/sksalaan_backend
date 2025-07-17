@@ -39,10 +39,6 @@ class YouthUserController extends Controller
     }
 
 
-    public function bulkGet()
-    {
-        return Bulk_logger::all();
-    }
 
 
     public function searchName(Request $request)
@@ -66,7 +62,10 @@ class YouthUserController extends Controller
         $results = YouthInfo::where(function ($query) use ($search) {
             $query->where('fname', 'LIKE', '%' . $search . '%')
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%');
+                ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                ->orWhereHas('yUser', function ($q) use ($search) {
+            $q->where('batchNo', 'LIKE', '%' . $search . '%');
+        });
         })->when(!is_null($typeId), function ($query) use ($typeId) {
             $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
             return $linked

@@ -22,7 +22,6 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     ];
 });
 
-Route::post('/export-excel', [XportExcel::class, 'export']);
 
 
 Route::post('/vals1', [ValidationFormController::class, 'valStep1']);

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\Supabase;
+use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthDataExportController;
 use App\Http\Controllers\YouthInfoController;
 use App\Http\Controllers\YouthUserController;
@@ -34,6 +35,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
     Route::get('/bulkGet', [YouthUserController::class, 'bulkGet']);
+    Route::post('/export-excel', [XportExcel::class, 'export']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();
