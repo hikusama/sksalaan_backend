@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BulkLoggerController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\Supabase;
 use App\Http\Controllers\XportExcel;
@@ -34,7 +35,9 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
     Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
-    Route::get('/bulkGet', [YouthUserController::class, 'bulkGet']);
+    Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);
+    Route::post('/bulkGetBatchContent', [BulkLoggerController::class, 'bulkGetBatchContent']);
+
     Route::post('/export-excel', [XportExcel::class, 'export']);
 
     Route::post('/logout-web', function (Request $request) {

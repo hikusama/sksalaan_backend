@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BulkLoggerController;
 use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthUserController;
@@ -22,7 +23,7 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     ];
 });
 
-
+    Route::post('/bulkGet', [BulkLoggerController::class, 'bulkGet']);
 
 Route::post('/vals1', [ValidationFormController::class, 'valStep1']);
 Route::post('/vals2', [ValidationFormController::class, 'valStep2']);

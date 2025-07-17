@@ -56,6 +56,10 @@ class User extends Authenticatable
 
 
 
+    public function batch()
+    {
+        return $this->hasMany(Bulk_logger::class);
+    }
     public function youthUser()
     {
         return $this->hasMany(YouthUser::class);
