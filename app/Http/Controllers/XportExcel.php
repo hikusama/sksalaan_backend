@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\YouthUser;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -16,6 +17,26 @@ class XportExcel extends Controller
         $type = $request->input('type');
         $start = $request->input('start');
         $end = $request->input('end');
+        if ($type != 2) {
+            try {
+                $start = Carbon::parse($start);
+                $end = Carbon::parse($end);
+            } catch (\Exception  $th) {
+                return response()->json(['message' => 'Invalid date'], 400);
+            }
+            $validator = Validator::make([
+                'start' => $start,
+                'end' => $end,
+            ], [
+                'start' => 'nullable|date|before_or_equal:today',
+                'end' => 'nullable|date|before_or_equal:today',
+            ]);
+            if ($validator->fails()) {
+                return response()->json(['message' => $validator->errors()->first()], 400);
+            }
+        }
+
+
         if ($end && !$start) {
             return response()->json(['message' => 'Set the start date'], 400);
         }
@@ -27,8 +48,12 @@ class XportExcel extends Controller
         ]);
         $date = 'All';
         if ($type == 3) {
-            if (!$start && !$end) {
+            if (!$start || !$end) {
                 return response()->json(['message' => 'Set all the date'], 400);
+            }
+
+            if ($start > $end) {
+                return response()->json(['message' => 'Start must lower than end'], 400);
             }
             $query->whereBetween('created_at', [$start, $end]);
             $date = Carbon::parse($start)->format('F j, Y') . ' to ' . Carbon::parse($end)->format('F j, Y');
