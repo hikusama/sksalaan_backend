@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\Supabase;
+use App\Http\Controllers\YouthDataExportController;
 use App\Http\Controllers\YouthInfoController;
 use App\Http\Controllers\YouthUserController;
 use App\Http\Middleware\CheckAdmin;

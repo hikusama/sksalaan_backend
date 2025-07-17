@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ValidationFormController;
+use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,7 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     ];
 });
 
+Route::post('/export-excel', [XportExcel::class, 'export']);
 
 
 Route::post('/vals1', [ValidationFormController::class, 'valStep1']);
