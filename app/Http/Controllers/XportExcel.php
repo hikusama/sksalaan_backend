@@ -12,6 +12,7 @@ class XportExcel extends Controller
 {
     public function export(Request $request)
     {
+        $type = $request->input('type');
         $start = $request->input('start');
         $end = $request->input('end');
         if ($end && !$start) {
@@ -24,10 +25,10 @@ class XportExcel extends Controller
             'civicInvolvement'
         ]);
         $date = 'All';
-        if ($start && $end) {
+        if (($start && $end)||$type == 3) {
             $query->whereBetween('created_at', [$start, $end]);
             $date = Carbon::parse($start)->format('F j, Y') . ' to ' . Carbon::parse($end)->format('F j, Y');
-        } elseif ($start) {
+        } elseif ($start || $type == 1) {
             $query->whereDate('created_at', $start);
             $date = Carbon::parse($start)->format('F j, Y');
         }
