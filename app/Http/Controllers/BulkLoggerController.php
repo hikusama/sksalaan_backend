@@ -20,7 +20,7 @@ class BulkLoggerController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = Bulk_logger::where('user_id', $user_id)->paginate(10);
+        $results = Bulk_logger::where('user_id', $user_id)->groupBy('batchNo')->paginate(10);
         return json_encode([
             'data' => $results->items(),
             'pagination' => [
