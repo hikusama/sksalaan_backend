@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bulk_logger;
 use App\Models\SkOfficial;
 use App\Models\User;
+use App\Models\YouthUser;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 
@@ -21,7 +22,7 @@ class BulkLoggerController extends Controller
             return $page;
         });
         $results = Bulk_logger::where('user_id', $user_id)->groupBy('batchNo')->paginate(10);
-        return json_encode([
+        return response()->json([
             'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
@@ -36,7 +37,7 @@ class BulkLoggerController extends Controller
             return $page;
         });
         $results = SkOfficial::paginate(10);
-        return json_encode([
+        return response()->json([
             'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
@@ -44,8 +45,45 @@ class BulkLoggerController extends Controller
             ]
         ]);
     }
-    public function bulkGet()
+
+
+    public function bulkDelete(Request $request, $batchNo)
     {
-        return Bulk_logger::all();
+        $bulkData = Bulk_logger::where('batchNo', $batchNo)->firstOrFail();
+        Bulk_logger::destroy($bulkData->id);
+        return response()->json([
+            'message' => 'success'
+        ],200);
+    }
+    public function bulkGet(Request $request)
+    {
+        $page = $request->input('page', 1);
+        $batchNo = $request->input('batchNo');
+
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = YouthUser::where('batchNo', $batchNo)->with([
+            'info',
+        ])->paginate(10);
+        $res = $results->items();
+        $data = [];
+        $full = [];
+        foreach ($res as $d) {
+            $data['fname'] = $d['info']['fname'];
+            $data['mname'] = $d['info']['mname'];
+            $data['lname'] = $d['info']['lname'];
+            $data['batchNo'] = $d['batchNo'];
+            $full[] = $data;
+            $data = [];
+        }
+
+        return response()->json([
+            'data' => $full,
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'last_pages' => $results->lastPage(),
+            ]
+        ]);
     }
 }

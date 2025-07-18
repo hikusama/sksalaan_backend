@@ -37,6 +37,8 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
     Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);
     Route::post('/bulkGetBatchContent', [BulkLoggerController::class, 'bulkGetBatchContent']);
+    Route::post('/bulkGet', [BulkLoggerController::class, 'bulkGet']);
+    Route::delete('/bulkDelete/{batchNo}', [BulkLoggerController::class, 'bulkDelete']);
 
     Route::post('/export-excel', [XportExcel::class, 'export']);
 
