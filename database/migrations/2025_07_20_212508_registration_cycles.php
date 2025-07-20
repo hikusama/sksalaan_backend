@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('registration_cycles', function (Blueprint $table) {
             $table->id();
-            $table->string('cycleStatus')->default('inActive');;
+            $table->string('cycleStatus')->default('inactive');;
             $table->string('cycleName');
             $table->date('start');
             $table->date('end')->nullable();

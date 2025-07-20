@@ -11,7 +11,9 @@ class RegistrationCycle extends Model
     use HasFactory;
     protected $fillable = [
         'cycleName',
+        'cycleStatus',
         'start',
+        'end',
     ];
 
     public function yUser()

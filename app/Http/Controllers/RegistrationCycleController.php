@@ -8,6 +8,7 @@ use Illuminate\Pagination\Paginator;
 
 class RegistrationCycleController extends Controller
 {
+
     public function store(Request $request)
     {
         $field = $request->validate([
@@ -15,38 +16,66 @@ class RegistrationCycleController extends Controller
         ]);
         $field['start'] = now();
 
-        // RegistrationCycle::create($field);
+        RegistrationCycle::create($field);
 
         return response()->json([
             'message' => 'Created Successfully...'
         ]);
     }
 
-    public function stopRunning(Request $request)
+    public function delteCycle(Request $request)
     {
+        $cycleID = $request->input('cycleID');
+
         try {
-            RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inActive']);
-            return response()->json([ 
+            $cycle = RegistrationCycle::findOrFail($cycleID);
+            RegistrationCycle::destroy($cycle->id);
+            return response()->json([
+                'message' => 'Cycle deleted Successfully...'
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'message' => 'Something went wrong!'
+            ], 400);
+        }
+    }
+
+    public function stopCycle(Request $request)
+    {
+        $cycleID = $request->input('cycleID');
+
+        try {
+            $cycle = RegistrationCycle::findOrFail($cycleID);
+            RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inactive']);
+            $cycle->end = now();
+            $cycle->save();
+            return response()->json([
                 'message' => 'Cycle Stopped Successfully...'
             ]);
         } catch (\Throwable $th) {
             return response()->json([
                 'message' => 'Something went wrong!'
-            ],400);
+            ], 400);
         }
     }
 
-    public function startRunning(Request $request)
+    public function runCycle(Request $request)
     {
+        $cycleID = $request->input('cycleID');
+
         try {
-            RegistrationCycle::where('cycleStatus', 'inActive')->update(['cycleStatus' => 'active']);
-            return response()->json([ 
+            $cycle = RegistrationCycle::findOrFail($cycleID);
+            RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inactive', 'end' => '']);
+            $cycle->cycleStatus = 'active';
+            $cycle->save();
+            return response()->json([
                 'message' => 'Cycle Started running...'
             ]);
         } catch (\Throwable $th) {
             return response()->json([
-                'message' => 'Something went wrong!'
-            ],400);
+                'message' => 'Something went wrong!:'. $cycleID,
+                'er' => $th->getMessage(),
+            ], 400);
         }
     }
     public function show(Request $request)
