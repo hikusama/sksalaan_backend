@@ -46,7 +46,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
         Route::post('/export-excel', [XportExcel::class, 'export']);
     });
     Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
-    Route::post('/getAllCycle', [RegistrationCycleController::class, 'show']);
+    Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();

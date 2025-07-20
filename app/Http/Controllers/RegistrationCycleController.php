@@ -11,15 +11,43 @@ class RegistrationCycleController extends Controller
     public function store(Request $request)
     {
         $field = $request->validate([
-            'cycleName' => 'required|max:20',
+            'cycleName' => 'required|max:20|min:4',
         ]);
-        $field['started'] = now();
+        $field['start'] = now();
 
-        RegistrationCycle::create($field);
+        // RegistrationCycle::create($field);
 
         return response()->json([
-            'message' => 'Success...'
+            'message' => 'Created Successfully...'
         ]);
+    }
+
+    public function stopRunning(Request $request)
+    {
+        try {
+            RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inActive']);
+            return response()->json([ 
+                'message' => 'Cycle Stopped Successfully...'
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'message' => 'Something went wrong!'
+            ],400);
+        }
+    }
+
+    public function startRunning(Request $request)
+    {
+        try {
+            RegistrationCycle::where('cycleStatus', 'inActive')->update(['cycleStatus' => 'active']);
+            return response()->json([ 
+                'message' => 'Cycle Started running...'
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'message' => 'Something went wrong!'
+            ],400);
+        }
     }
     public function show(Request $request)
     {
