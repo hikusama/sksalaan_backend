@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('youth_users', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('registration_cycle_id')->nullable()->constrained()->cascadeOnDelete();
             $table->integer('batchNo');
             $table->string('youthType');
             $table->string('skills');
