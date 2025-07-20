@@ -27,7 +27,7 @@ class RegistrationCycleController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = RegistrationCycle::paginate(10);
+        $results = RegistrationCycle::withCount('yUser')->paginate(10);
 
         return response()->json([
             'data' => $results->items(),

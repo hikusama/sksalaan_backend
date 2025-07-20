@@ -13,4 +13,9 @@ class RegistrationCycle extends Model
         'cycleName',
         'started',
     ];
+
+    public function yUser()
+    {
+        return $this->hasMany(YouthUser::class);
+    }
 }

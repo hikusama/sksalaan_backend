@@ -19,6 +19,10 @@ class YouthUser extends Model
 
 
     // In YouthUser.php
+    public function regCycle()
+    {
+        return $this->belongsTo(RegistrationCycle::class, 'registration_cycle_id');
+    }
     public function info()
     {
         return $this->hasOne(YouthInfo::class);
@@ -37,11 +41,10 @@ class YouthUser extends Model
     }
 
 
-    public function user()  {
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
-
-
 }
 /*
 	-youth_id

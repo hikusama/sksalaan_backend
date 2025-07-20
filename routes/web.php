@@ -42,11 +42,11 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
         Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);
         Route::post('/bulkGetBatchContent', [BulkLoggerController::class, 'bulkGetBatchContent']);
         Route::post('/bulkGet', [BulkLoggerController::class, 'bulkGet']);
-        Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
-        Route::post('/getAllCycle', [RegistrationCycleController::class, 'show']);
         Route::delete('/bulkDelete/{batchNo}', [BulkLoggerController::class, 'bulkDelete']);
         Route::post('/export-excel', [XportExcel::class, 'export']);
     });
+    Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
+    Route::post('/getAllCycle', [RegistrationCycleController::class, 'show']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();
