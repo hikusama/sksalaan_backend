@@ -41,7 +41,7 @@ class XportExcel extends Controller
             return response()->json(['message' => 'Set the start date'], 400);
         }
 
-        $query = YouthUser::with([
+        $query = YouthUser::whereNotNull('user_id')->with([
             'info',
             'educbg',
             'civicInvolvement'
