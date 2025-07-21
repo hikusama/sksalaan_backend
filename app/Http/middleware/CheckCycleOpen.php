@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Models\RegistrationCycle;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class CheckCycleOpen
 {
