@@ -48,7 +48,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
     Route::put('/runCycle', [RegistrationCycleController::class, 'runCycle']);
-    Route::delete('/deleteCycle', [RegistrationCycleController::class, 'deleteCycle']);
+    Route::delete('/deleteCycle/{id}', [RegistrationCycleController::class, 'deleteCycle']);
     Route::put('/stopCycle', [RegistrationCycleController::class, 'stopCycle']);
 
     Route::post('/logout-web', function (Request $request) {

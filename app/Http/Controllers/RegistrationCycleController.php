@@ -23,9 +23,9 @@ class RegistrationCycleController extends Controller
         ]);
     }
 
-    public function delteCycle(Request $request)
+    public function deleteCycle($id)
     {
-        $cycleID = $request->input('cycleID');
+        $cycleID = $id;
 
         try {
             $cycle = RegistrationCycle::findOrFail($cycleID);
@@ -35,7 +35,9 @@ class RegistrationCycleController extends Controller
             ]);
         } catch (\Throwable $th) {
             return response()->json([
-                'message' => 'Something went wrong!'
+                'message' => 'Something went wrong!'. $cycleID,
+                'er' => $th->getMessage(),
+
             ], 400);
         }
     }
