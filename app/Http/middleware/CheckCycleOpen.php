@@ -14,7 +14,6 @@ class CheckCycleOpen
         if (!RegistrationCycle::where('cycleStatus', 'active')->exists()) {
             return response()->json(['error' => 'No active cycle do create one!.'], 401);
         }
-
         return $next($request);
     }
 }
