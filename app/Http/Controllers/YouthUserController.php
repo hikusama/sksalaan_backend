@@ -6,6 +6,7 @@ use App\Http\Middleware\CheckAdmin;
 use App\Models\Bulk_logger;
 use App\Models\civicInvolvement;
 use App\Models\EducBG;
+use App\Models\RegistrationCycle;
 use App\Models\User;
 use App\Models\YouthInfo;
 use App\Models\YouthUser;
@@ -33,10 +34,6 @@ class YouthUserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        // return YouthUser::all();
-    }
 
 
 
@@ -49,6 +46,11 @@ class YouthUserController extends Controller
         $page = $request->input('page', 1);
         $sortBy = $request->input('sortBy', 'fname');
         $typeId = $request->input('typeId');
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
         if (!in_array($sortBy, $allowedFilters)) {
@@ -59,23 +61,27 @@ class YouthUserController extends Controller
             return $page;
         });
 
-        $results = YouthInfo::where(function ($query) use ($search) {
-            $query->where('fname', 'LIKE', '%' . $search . '%')
-                ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%')
-                ->orWhereHas('yUser', function ($q) use ($search) {
-            $q->where('batchNo', 'LIKE', '%' . $search . '%');
-        });
-        })->when(!is_null($typeId), function ($query) use ($typeId) {
-            $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
-            return $linked
-                ? $query->whereHas('yUser', function ($q) {
-                    $q->whereNotNull('user_id');
-                })
-                : $query->whereHas('yUser', function ($q) {
-                    $q->whereNull('user_id');
-                });
+        $results = YouthInfo::whereHas('yUser.regCycle', function ($q) use ($cycleID) {
+            $q->where('registration_cycle_id', $cycleID);
         })
+            ->where(function ($query) use ($search) {
+                $query->where('fname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('yUser', function ($q) use ($search) {
+                        $q->where('batchNo', 'LIKE', '%' . $search . '%');
+                    });
+            })
+            ->when(!is_null($typeId), function ($query) use ($typeId) {
+                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
+                return $linked
+                    ? $query->whereHas('yUser', function ($q) {
+                        $q->whereNotNull('user_id');
+                    })
+                    : $query->whereHas('yUser', function ($q) {
+                        $q->whereNull('user_id');
+                    });
+            })
             ->orderBy($sortBy, 'DESC')
             ->with([
                 'yUser',
@@ -115,6 +121,11 @@ class YouthUserController extends Controller
      */
     public function store(Request $request)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
 
         DB::beginTransaction();
         try {
@@ -132,6 +143,7 @@ class YouthUserController extends Controller
             }
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
 
+            $renamedFields['registration_cycle_id'] = $cycleID;
             $renamedFields['batchNo'] = $batchNo;
             $renamedFields['user_id'] = $request->user()->id;
             $yUser = YouthUser::create($renamedFields);
@@ -201,7 +213,11 @@ class YouthUserController extends Controller
 
     public function registerYouth(Request $request)
     {
+        $cycleID = $this->getCycle();
 
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         DB::beginTransaction();
         try {
             $fields = $request->validate([
@@ -218,6 +234,7 @@ class YouthUserController extends Controller
             }
             // $renamedFields['user_id'] = null;
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
+            $renamedFields['registration_cycle_id'] = $cycleID;
             $renamedFields['batchNo'] = $batchNo;
             $yUser = YouthUser::create($renamedFields);
 
@@ -382,7 +399,11 @@ class YouthUserController extends Controller
     public function migrateFromMobile(Request $request)
     {
 
+        $cycleID = $this->getCycle();
 
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $migrateData = $request->all();
 
         $attempted = count($migrateData);
@@ -436,6 +457,7 @@ class YouthUserController extends Controller
                 $userData = array_merge($youth['user'], [
                     'user_id' => $uuid,
                     'batchNo' => $batchNo,
+                    'registration_cycle_id' => $cycleID,
                 ]);
                 $youth_user_id = DB::table('youth_users')->insertGetId($userData);
 
@@ -585,6 +607,11 @@ class YouthUserController extends Controller
 
     public function youthApprove(Request $request)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $user = User::findOrFail($request->input('user_id'));
         $yUser = YouthUser::findOrFail($request->input('youthid'));
         $yUser->user_id =  $user->id;
@@ -597,6 +624,11 @@ class YouthUserController extends Controller
 
     public function update(Request $request, $youth)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $youth = YouthUser::findOrFail($youth);
 
         $fields = $request->validate([
@@ -709,6 +741,11 @@ class YouthUserController extends Controller
      */
     public function destroy($youth)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         // $msg = 'Something went wrong ';
         // try {
         //     $youth->delete();
@@ -725,10 +762,10 @@ class YouthUserController extends Controller
         } catch (\Throwable $th) {
             return response()->json(['message' => $th->getMessage()], 404);
         }
-
-        var_dump($youth);
-
-        // $youth->delete();
-
+    }
+    public function getCycle()
+    {
+        $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+        return $res->id ?? 0;
     }
 }

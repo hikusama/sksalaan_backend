@@ -34,8 +34,6 @@ Route::middleware(['auth:sanctum'])->post('/migrate', [YouthUserController::clas
 
 
 
-Route::get('/bulkInsert', [YouthUserController::class, function () {
-    return 'Hello';
-}]);
+Route::get('/bulkInsert', [YouthUserController::class, 'getCycle']);
 
 Route::post('/loginOfficials', [AuthController::class, 'loginOfficials']);

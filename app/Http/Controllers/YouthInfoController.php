@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreyouthInfoRequest;
 use App\Http\Requests\UpdateyouthInfoRequest;
+use App\Models\RegistrationCycle;
 use App\Models\YouthInfo;
 use App\Models\YouthUser;
 use Illuminate\Http\Client\Request;
@@ -59,8 +60,9 @@ class YouthInfoController extends Controller
     }
 
 
-    public function destroy(YouthInfo $youthInfo)
+    public function getCycle()
     {
-        //
+        $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+        return $res->id ?? 0;
     }
 }
