@@ -26,13 +26,14 @@ class YouthInfoController extends Controller
         $yt = YouthUser::select(DB::raw("LOWER(youthType) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(youthType) IN ('isy', 'osy')")
             ->where('registration_cycle_id', $cycleID)
+            ->whereNotNull('user_id')
             ->groupBy('name')
             ->get();
 
         $sex = YouthInfo::select(DB::raw("LOWER(sex) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(sex) IN ('male', 'female')")
             ->whereHas('yUser', function ($q) use ($cycleID) {
-                $q->where('registration_cycle_id', $cycleID);
+                $q->where('registration_cycle_id', $cycleID)->whereNotNull('user_id');
             })
             ->groupBy('name')
             ->get();
@@ -44,7 +45,7 @@ class YouthInfoController extends Controller
                     ->orWhere('gender', '');
             })
             ->whereHas('yUser', function ($q) use ($cycleID) {
-                $q->where('registration_cycle_id', $cycleID);
+                $q->where('registration_cycle_id', $cycleID)->whereNotNull('user_id');
             })
             ->groupBy('name')
             ->get();
@@ -52,7 +53,7 @@ class YouthInfoController extends Controller
         $ages = YouthInfo::select('age', DB::raw('COUNT(*) as count'))
             ->whereIn('age', range(15, 30))
             ->whereHas('yUser', function ($q) use ($cycleID) {
-                $q->where('registration_cycle_id', $cycleID);
+                $q->where('registration_cycle_id', $cycleID)->whereNotNull('user_id');
             })
             ->groupBy('age')
             ->orderBy('age')
@@ -61,7 +62,7 @@ class YouthInfoController extends Controller
         $civilStats = YouthInfo::select(DB::raw("LOWER(civilStatus) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(civilStatus) IN ('single', 'married', 'divorce', 'outside-marriage')")
             ->whereHas('yUser', function ($q) use ($cycleID) {
-                $q->where('registration_cycle_id', $cycleID);
+                $q->where('registration_cycle_id', $cycleID)->whereNotNull('user_id');
             })
             ->groupBy('name')
             ->orderBy('name')
@@ -70,7 +71,7 @@ class YouthInfoController extends Controller
         $religions = YouthInfo::select(DB::raw("LOWER(religion) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(religion) IN ('islam', 'christianity', 'judaism', 'buddhism', 'hinduism', 'atheism', 'others')")
             ->whereHas('yUser', function ($q) use ($cycleID) {
-                $q->where('registration_cycle_id', $cycleID);
+                $q->where('registration_cycle_id', $cycleID)->whereNotNull('user_id');
             })
             ->groupBy('name')
             ->orderBy('name')
