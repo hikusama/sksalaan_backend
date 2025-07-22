@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RegistrationCycle;
 use App\Models\SkOfficial;
 use App\Models\User;
 use App\Models\YouthUser;
@@ -132,8 +133,11 @@ class AuthController extends Controller
 
     public function loginOfficials(Request $request)
     {
-        Log::info('account: ' . json_encode($request->all()));
+        $cycleID = $this->getCycle();
 
+        if (!$cycleID) {
+            return response()->json(['auth' => 'No active cycle.'], 400);
+        }
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'password' => 'required',
@@ -165,14 +169,13 @@ class AuthController extends Controller
         ];
     }
 
-
-
     public function searchSkOfficial(Request $request)
     {
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
 
+        $cycleID = $this->getCycle();
 
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
@@ -182,18 +185,28 @@ class AuthController extends Controller
             $query->where('name', 'LIKE', '%' . $search . '%');
         })
             ->orderBy('name', "DESC")
-            ->with([
-                'user',
+            ->with(['user'])
+            ->withCount([
+                'insertedYouth as inserted_youth_count' => function ($query) use ($cycleID) {
+                    if ($cycleID) {
+                        $query->where('registration_cycle_id', $cycleID);
+                    } else {
+                        // Always false condition to return 0
+                        $query->whereRaw('0 = 1');
+                    }
+                }
             ])
-            ->withCount('insertedYouth')
             ->paginate($perPage)
             ->appends(['search' => $search]);
 
+        if (!$cycleID) {
+            foreach ($results as $item) {
+                $item->inserted_youth_count = -1;
+            }
+        }
         $pass = $results->map(function ($info) {
             return [
-                'skofficial' => [
-                    $info
-                ]
+                'skofficial' => [$info]
             ];
         });
 
@@ -247,5 +260,11 @@ class AuthController extends Controller
         User::destroy($bye->id);
 
         return response()->json(['message' => 'Deleted successfylly']);
+    }
+
+    public function getCycle()
+    {
+        $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+        return $res->id ?? 0;
     }
 }

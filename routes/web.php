@@ -29,10 +29,6 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
         Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
         Route::post('/search', [YouthUserController::class, 'searchName']);
         Route::apiResource('/supah', Supabase::class);
-        Route::post('/user/modify', [AuthController::class, 'modifyUser']);
-        Route::delete('/deleteskaccount/{id}', [AuthController::class, 'destroy']);
-        Route::post('/searchSkOfficial', [AuthController::class, 'searchSkOfficial']);
-        Route::post('/register', [AuthController::class, 'register']);
         Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
         Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
         Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
@@ -45,6 +41,11 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
         Route::delete('/bulkDelete/{batchNo}', [BulkLoggerController::class, 'bulkDelete']);
         Route::post('/export-excel', [XportExcel::class, 'export']);
     });
+    Route::post('/user/modify', [AuthController::class, 'modifyUser']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/searchSkOfficial', [AuthController::class, 'searchSkOfficial']);
+    Route::delete('/deleteskaccount/{id}', [AuthController::class, 'destroy']);
+    
     Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
     Route::put('/runCycle', [RegistrationCycleController::class, 'runCycle']);
