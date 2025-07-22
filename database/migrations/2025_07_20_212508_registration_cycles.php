@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('cycleStatus')->default('inactive');;
             $table->string('cycleName');
-            $table->date('start');
+            $table->date('start')->nullable();
             $table->date('end')->nullable();
             $table->timestamps();
         });

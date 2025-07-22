@@ -14,7 +14,6 @@ class RegistrationCycleController extends Controller
         $field = $request->validate([
             'cycleName' => 'required|max:20|min:4',
         ]);
-        $field['start'] = now();
 
         RegistrationCycle::create($field);
 
@@ -35,7 +34,7 @@ class RegistrationCycleController extends Controller
             ]);
         } catch (\Throwable $th) {
             return response()->json([
-                'message' => 'Something went wrong!'. $cycleID,
+                'message' => 'Something went wrong!' . $cycleID,
                 'er' => $th->getMessage(),
 
             ], 400);
@@ -60,26 +59,41 @@ class RegistrationCycleController extends Controller
             ], 400);
         }
     }
-
     public function runCycle(Request $request)
     {
         $cycleID = $request->input('cycleID');
 
         try {
             $cycle = RegistrationCycle::findOrFail($cycleID);
-            RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inactive', 'end' => '']);
+
+            // Just deactivate other active cycles — no timestamp set here
+            RegistrationCycle::where('cycleStatus', 'active')
+                ->where('id', '!=', $cycleID)
+                ->update([
+                    'cycleStatus' => 'inactive',
+                ]);
+
+            // Restart or start the selected cycle
             $cycle->cycleStatus = 'active';
+            $cycle->end = null; // clear any old end time
+            if (!$cycle->start) {
+                $cycle->start = now();
+            }
+
             $cycle->save();
+
             return response()->json([
-                'message' => 'Cycle Started running...'
+                'message' => 'Cycle restarted successfully.',
+                'cycle' => $cycle,
             ]);
         } catch (\Throwable $th) {
             return response()->json([
-                'message' => 'Something went wrong!:'. $cycleID,
-                'er' => $th->getMessage(),
+                'message' => 'Something went wrong! ID: ' . $cycleID,
+                'error' => $th->getMessage(),
             ], 400);
         }
     }
+
     public function show(Request $request)
     {
         $page = $request->input('page', 1);
