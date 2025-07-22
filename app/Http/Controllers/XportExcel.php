@@ -15,8 +15,8 @@ class XportExcel extends Controller
 {
     public function export(Request $request)
     {
-        $cycleID = $this->getCycle();
-
+        $cycle = $this->getCycle();
+        $cycleID = $cycle->id ?? 0;
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
         }
@@ -83,6 +83,8 @@ class XportExcel extends Controller
             $sheet->setCellValue('A1', 'Record as of');
             $sheet->setCellValue('B1', $date);
         }
+        $sheet->setCellValue('D1', 'From');
+        $sheet->setCellValue('E1', $cycle->cycleName . ' Cycle');
         $sheet->setCellValue('A2', '#');
         $sheet->setCellValue('B2', 'Name');
         $sheet->setCellValue('C2', 'Age');
@@ -190,6 +192,6 @@ class XportExcel extends Controller
     public function getCycle()
     {
         $res = RegistrationCycle::where('cycleStatus', 'active')->first();
-        return $res->id ?? 0;
+        return $res;
     }
 }
