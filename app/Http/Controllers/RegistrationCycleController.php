@@ -66,16 +66,14 @@ class RegistrationCycleController extends Controller
         try {
             $cycle = RegistrationCycle::findOrFail($cycleID);
 
-            // Just deactivate other active cycles — no timestamp set here
             RegistrationCycle::where('cycleStatus', 'active')
                 ->where('id', '!=', $cycleID)
                 ->update([
                     'cycleStatus' => 'inactive',
                 ]);
 
-            // Restart or start the selected cycle
             $cycle->cycleStatus = 'active';
-            $cycle->end = null; // clear any old end time
+            $cycle->end = null;  
             if (!$cycle->start) {
                 $cycle->start = now();
             }
@@ -83,7 +81,7 @@ class RegistrationCycleController extends Controller
             $cycle->save();
 
             return response()->json([
-                'message' => 'Cycle restarted successfully.',
+                'message' => 'Cycle started successfully.',
                 'cycle' => $cycle,
             ]);
         } catch (\Throwable $th) {
