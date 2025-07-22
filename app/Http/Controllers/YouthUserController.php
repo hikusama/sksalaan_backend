@@ -402,7 +402,7 @@ class YouthUserController extends Controller
         $cycleID = $this->getCycle();
 
         if (!$cycleID) {
-            return response()->json(['error' => 'No active cycle.'], 400);
+            return response()->json(['cycleClose' => 'No active cycle.'], 400);
         }
         $migrateData = $request->all();
 

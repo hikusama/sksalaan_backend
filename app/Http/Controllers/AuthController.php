@@ -133,11 +133,6 @@ class AuthController extends Controller
 
     public function loginOfficials(Request $request)
     {
-        $cycleID = $this->getCycle();
-
-        if (!$cycleID) {
-            return response()->json(['auth' => 'No active cycle.'], 400);
-        }
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'password' => 'required',
