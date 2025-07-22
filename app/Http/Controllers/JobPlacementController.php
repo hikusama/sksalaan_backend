@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Job_support;
+use App\Models\RegistrationCycle;
 use App\Models\YouthInfo;
 use App\Models\YouthUser;
 use Illuminate\Http\Request;
@@ -16,6 +17,11 @@ class JobPlacementController extends Controller
 
     public function searchJobPlacedYouth(Request $request)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
@@ -33,6 +39,7 @@ class JobPlacementController extends Controller
         $results = DB::table('youth_users')
             ->rightJoin('job_supports', 'youth_users.id', '=', 'job_supports.youth_user_id')
             ->join('youth_infos', 'youth_infos.youth_user_id', '=', 'youth_users.id')
+            ->where('youth_users.registration_cycle_id', $cycleID)
             ->where(function ($query) use ($search) {
                 $query->where('youth_infos.fname', 'LIKE', '%' . $search . '%')
                     ->orWhere('youth_infos.mname', 'LIKE', '%' . $search . '%')
@@ -82,7 +89,11 @@ class JobPlacementController extends Controller
     public function recruitYouth(Request $request)
     {
 
+        $cycleID = $this->getCycle();
 
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $recruited = $request->validate([
             'youth_user_id' => 'required',
             'task' => 'required|max:100',
@@ -106,6 +117,11 @@ class JobPlacementController extends Controller
     }
     public function youthLightData(Request $request)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
@@ -121,11 +137,14 @@ class JobPlacementController extends Controller
             return $page;
         });
 
-        $results = YouthInfo::where(function ($query) use ($search) {
-            $query->where('fname', 'LIKE', '%' . $search . '%')
-                ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%');
+        $results = YouthInfo::whereHas('yUser', function ($q) use ($cycleID) {
+            $q->where('registration_cycle_id', $cycleID);
         })
+            ->where(function ($query) use ($search) {
+                $query->where('fname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('lname', 'LIKE', '%' . $search . '%');
+            })
             ->orderBy($sortBy, 'DESC')
             ->with('yUser')
             ->addSelect([
@@ -133,15 +152,15 @@ class JobPlacementController extends Controller
                     ->selectRaw('COUNT(*)')
                     ->whereColumn('job_supports.youth_user_id', 'youth_infos.youth_user_id')
             ])->when(!is_null($typeId), function ($query) use ($typeId) {
-            $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
-            return $linked
-                ? $query->whereHas('yUser', function ($q) {
-                    $q->whereNotNull('user_id');
-                })
-                : $query->whereHas('yUser', function ($q) {
-                    $q->whereNull('user_id');
-                });
-        })
+                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
+                return $linked
+                    ? $query->whereHas('yUser', function ($q) {
+                        $q->whereNotNull('user_id');
+                    })
+                    : $query->whereHas('yUser', function ($q) {
+                        $q->whereNull('user_id');
+                    });
+            })
             ->paginate($perPage)
             ->appends([
                 'q' => $search,
@@ -176,6 +195,11 @@ class JobPlacementController extends Controller
 
     public function deleteJobRecord($jobPlacement)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $jobPlacement = Job_support::findOrFail($jobPlacement);
 
         Job_support::destroy($jobPlacement->id);
@@ -186,6 +210,11 @@ class JobPlacementController extends Controller
 
     public function payYouth(Request $request)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $job = Job_support::findOrFail($request->input('id'));
         $request->validate([
             'date' => 'required:date_format:Y-m-d|before_or_equal:today',
@@ -193,5 +222,11 @@ class JobPlacementController extends Controller
         $job->paid_at =  $request->input('date');
         $job->save();
         return '';
+    }
+
+    public function getCycle()
+    {
+        $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+        return $res->id ?? 0;
     }
 }
