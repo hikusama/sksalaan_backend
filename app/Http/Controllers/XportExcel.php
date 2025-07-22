@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RegistrationCycle;
 use App\Models\YouthUser;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,6 +15,11 @@ class XportExcel extends Controller
 {
     public function export(Request $request)
     {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
         $type = $request->input('type');
         $start = $request->input('start');
         $end = $request->input('end');
@@ -41,11 +47,13 @@ class XportExcel extends Controller
             return response()->json(['message' => 'Set the start date'], 400);
         }
 
-        $query = YouthUser::whereNotNull('user_id')->with([
-            'info',
-            'educbg',
-            'civicInvolvement'
-        ]);
+        $query = YouthUser::whereNotNull('user_id')
+            ->where('registration_cycle_id', $cycleID)
+            ->with([
+                'info',
+                'educbg',
+                'civicInvolvement'
+            ]);
         $date = 'All';
         if ($type == 3) {
             if (!$start || !$end) {
@@ -178,5 +186,10 @@ class XportExcel extends Controller
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
         }, Carbon::now()->format('m-d-y_h:ia') . 'Youth.xlsx');
+    }
+    public function getCycle()
+    {
+        $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+        return $res->id ?? 0;
     }
 }
