@@ -62,8 +62,10 @@ class RegistrationCycleController extends Controller
     public function runCycle(Request $request)
     {
         $cycleID = $request->input('cycleID');
+        $toend = $request->input('toend');
 
         try {
+            $cycleToEnd = RegistrationCycle::findOrFail($toend);
             $cycle = RegistrationCycle::findOrFail($cycleID);
 
             RegistrationCycle::where('cycleStatus', 'active')
@@ -72,12 +74,14 @@ class RegistrationCycleController extends Controller
                     'cycleStatus' => 'inactive',
                 ]);
 
+            $cycleToEnd->end = now();
             $cycle->cycleStatus = 'active';
-            $cycle->end = null;  
+            $cycle->end = null;
             if (!$cycle->start) {
                 $cycle->start = now();
             }
 
+            $cycleToEnd->save();
             $cycle->save();
 
             return response()->json([
