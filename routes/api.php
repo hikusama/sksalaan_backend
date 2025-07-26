@@ -6,19 +6,31 @@ use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthUserController;
 use App\Http\Middleware\CheckCycleOpen;
+use App\Models\RegistrationCycle;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 
 Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request) {
     $token = $request->user()->currentAccessToken();
+    $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+    $cycleID = $res->id ?? null;
+    try {
+        //code...
 
-    if ($token && $token->expires_at && now()->greaterThan($token->expires_at)) {
-        $token->delete();
-        return response()->json(['message' => 'Token expired'], 401);
+        if (!$cycleID) {
+            $request->user()->tokens()->delete();
+            return response()->json(['auth' => 'No active cycle.'], 400);
+        }
+        if ($token && $token->expires_at && now()->greaterThan($token->expires_at)) {
+            $request->user()->tokens()->delete();
+            return response()->json(['message' => 'Token expired'], 401);
+        }
+        $user = $request->user()->load('skofficials');
+    } catch (\Throwable $th) {
+        Log::info("4545:" . $th->getMessage());
     }
-    $user = $request->user()->load('skofficials');
-
     return [
         'user' => $user,
     ];

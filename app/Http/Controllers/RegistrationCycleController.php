@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RegistrationCycle;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
 
 class RegistrationCycleController extends Controller
 {
@@ -63,9 +64,13 @@ class RegistrationCycleController extends Controller
     {
         $cycleID = $request->input('cycleID');
         $toend = $request->input('toend');
-
         try {
-            $cycleToEnd = RegistrationCycle::findOrFail($toend);
+            $tablesCount = RegistrationCycle::take(2)->get(['id']);
+            if (count($tablesCount) > 1 && $toend) {
+                $cycleToEnd = RegistrationCycle::findOrFail($toend);
+                $cycleToEnd->end = now();
+                $cycleToEnd->save();
+            } 
             $cycle = RegistrationCycle::findOrFail($cycleID);
 
             RegistrationCycle::where('cycleStatus', 'active')
@@ -74,19 +79,16 @@ class RegistrationCycleController extends Controller
                     'cycleStatus' => 'inactive',
                 ]);
 
-            $cycleToEnd->end = now();
             $cycle->cycleStatus = 'active';
             $cycle->end = null;
             if (!$cycle->start) {
                 $cycle->start = now();
             }
 
-            $cycleToEnd->save();
             $cycle->save();
 
             return response()->json([
                 'message' => 'Cycle started successfully.',
-                'cycle' => $cycle,
             ]);
         } catch (\Throwable $th) {
             return response()->json([

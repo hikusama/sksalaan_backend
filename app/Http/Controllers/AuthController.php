@@ -133,6 +133,12 @@ class AuthController extends Controller
 
     public function loginOfficials(Request $request)
     {
+        $cycleID = $this->getCycle();
+        $errors = [];
+
+        if (!$cycleID) {
+            $errors['auth'] = 'No active cycle.';
+        }
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'password' => 'required',
@@ -140,7 +146,6 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        $errors = [];
 
         if (!Hash::check($request->password, $user->password)) {
             $errors['password'] = 'Incorrect Password.';
