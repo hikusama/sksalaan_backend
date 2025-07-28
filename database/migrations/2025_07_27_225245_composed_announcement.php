@@ -11,7 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        //
+        Schema::create('composed_announcement', function (Blueprint $table) {
+            $table->id();
+            $table->string('status')->default('pending');
+            $table->date('when');
+            $table->string('where');
+            $table->string('what');
+            $table->string('description');
+            $table->timestamps();
+        });
     }
 
     /**
@@ -20,5 +28,6 @@ return new class extends Migration
     public function down(): void
     {
         //
+        Schema::dropIfExists('composed_announcement');
     }
 };
