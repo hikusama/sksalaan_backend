@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulkLoggerController;
+use App\Http\Controllers\ComposedAnnouncementController;
 use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthUserController;

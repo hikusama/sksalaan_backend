@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulkLoggerController;
+use App\Http\Controllers\ComposedAnnouncementController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\RegistrationCycleController;
 use App\Http\Controllers\Supabase;
@@ -24,6 +25,10 @@ Route::middleware(['auth', CheckAdmin::class])->get('/web/user', function (Reque
 });
 
 Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function () {
+    Route::post('/valStep1Post', [ComposedAnnouncementController::class, 'valStep1Post']);
+    Route::post('/valStep2Post', [ComposedAnnouncementController::class, 'valStep2Post']);
+    Route::get('/dropDownCycle', [ComposedAnnouncementController::class, 'getAllCycle']);
+
     Route::middleware(CheckCycleOpen::class)->group(function () {
         Route::apiResource('/youth', YouthUserController::class);
         Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
@@ -45,7 +50,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/searchSkOfficial', [AuthController::class, 'searchSkOfficial']);
     Route::delete('/deleteskaccount/{id}', [AuthController::class, 'destroy']);
-    
+
     Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
     Route::put('/runCycle', [RegistrationCycleController::class, 'runCycle']);
