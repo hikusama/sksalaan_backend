@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ComposedAnnouncement;
 use App\Models\RegistrationCycle;
 use Illuminate\Http\Request;
 
@@ -11,47 +12,73 @@ class ComposedAnnouncementController extends Controller
 
     public function valStep1Post(Request $request)
     {
-        $request->validate([
+        $fields = $request->validate([
             'cycle' => 'required|exists:registration_cycles,cycleName',
             'addresses' => [
-                function ($attr, $val,$fail){
+                function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
                         $fail($attr . ' must be chosen at least one.');
                     }
                 }
             ]
         ]);
- 
+
+
+
         return response()->json([
             true
         ]);
-  
     }
     public function valStep2Post(Request $request)
     {
+
         $request->validate([
-            'when' => 'required|date_format:Y-m-d',
+            'when' => 'required|date_format:Y-m-d\TH:i|after_or_equal:' . now()->format('Y-m-d\TH:i'),
             'where' => 'required|max:60',
             'what' => 'required|max:60',
             'description' => 'required|max:120',
         ]);
- 
+
         return response()->json([
-            true
+            $request->all()
         ]);
-  
     }
 
     public function compose(Request $request)
     {
-        $request->validate([
-            'organization' => 'required|string|max:255',
-            'orgaddress' => 'required|string|max:255',
-            'start' => 'required|date_format:Y-m-d',
-            'end' => 'required|string|max:255',
-            'yearGraduated' => 'required|integer|between:1995,2100',
+        $fields = $request->validate([
+            'when' => 'required|date_format:Y-m-d\TH:i|after_or_equal:' . now()->format('Y-m-d\TH:i'),
+            'where' => 'required|max:60',
+            'what' => 'required|max:60',
+            'description' => 'required|max:120',
+            'cycle' => 'required|exists:registration_cycles,cycleName',
+            'addresses' => [
+                function ($attr, $val, $fail) {
+                    if (!collect($val)->flatten()->contains(true)) {
+                        $fail($attr . ' must be chosen at least one.');
+                    }
+                }
+            ]
         ]);
-        return true;
+
+        $selectedString = collect($fields['addresses'])
+            ->filter(fn($v) => $v === true)
+            ->keys()
+            ->map(fn($key) => str_replace('_', ' ', $key))
+            ->implode(', ');
+        $fields['addresses'] = $selectedString;
+        try {
+            //code...
+            $res = ComposedAnnouncement::create($fields);
+        } catch (\Throwable $th) {
+        return $th->getMessage();
+
+            //throw $th;
+        }
+
+        return response()->json([
+            $res
+        ]);
     }
     public function getAllCycle(Request $request)
     {

@@ -27,6 +27,7 @@ Route::middleware(['auth', CheckAdmin::class])->get('/web/user', function (Reque
 Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function () {
     Route::post('/valStep1Post', [ComposedAnnouncementController::class, 'valStep1Post']);
     Route::post('/valStep2Post', [ComposedAnnouncementController::class, 'valStep2Post']);
+    Route::post('/compose', [ComposedAnnouncementController::class, 'compose']);
     Route::get('/dropDownCycle', [ComposedAnnouncementController::class, 'getAllCycle']);
 
     Route::middleware(CheckCycleOpen::class)->group(function () {
