@@ -99,8 +99,7 @@ class ComposedAnnouncementController extends Controller
             'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
-                'total_pages' => $results->lastPage(),
-                'total_items' => $results->total(),
+                'last_pages' => $results->lastPage(),
             ]
         ]);
     }
@@ -115,8 +114,7 @@ class ComposedAnnouncementController extends Controller
             'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
-                'total_pages' => $results->lastPage(),
-                'total_items' => $results->total(),
+                'last_pages' => $results->lastPage(),
             ]
         ]);
     }
@@ -133,8 +131,7 @@ class ComposedAnnouncementController extends Controller
             'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
-                'total_pages' => $results->lastPage(),
-                'total_items' => $results->total(),
+                'last_pages' => $results->lastPage(),
             ]
         ]);
     }
@@ -149,8 +146,7 @@ class ComposedAnnouncementController extends Controller
             'data' => $results->items(),
             'pagination' => [
                 'current_page' => $results->currentPage(),
-                'total_pages' => $results->lastPage(),
-                'total_items' => $results->total(),
+                'last_pages' => $results->lastPage(),
             ]
         ]);
     }
