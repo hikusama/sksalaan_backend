@@ -11,7 +11,8 @@ class ComposedAnnouncement extends Model
     use HasFactory;
 
     protected $fillable = [
-        'status',
+        'webStatus',
+        'smsStatus',
         'when',
         'where',
         'what',

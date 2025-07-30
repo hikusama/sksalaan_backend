@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('composed_announcements', function (Blueprint $table) {
             $table->id();
-            $table->string('status')->default('pending');
+            $table->string('smsStatus')->default('pending');
+            $table->string('webStatus')->default('pending');
             $table->dateTime('when');
             $table->string('where');
             $table->string('what');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ComposedAnnouncement;
 use App\Models\RegistrationCycle;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 
 class ComposedAnnouncementController extends Controller
 {
@@ -71,7 +72,7 @@ class ComposedAnnouncementController extends Controller
             //code...
             $res = ComposedAnnouncement::create($fields);
         } catch (\Throwable $th) {
-        return $th->getMessage();
+            return $th->getMessage();
 
             //throw $th;
         }
@@ -85,6 +86,38 @@ class ComposedAnnouncementController extends Controller
         $cycle = RegistrationCycle::all();
         return response()->json([
             'cycle' => $cycle
+        ]);
+    }
+    public function getMessagePending(Request $request)
+    {
+        $page = $request->input('page', 1);
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = ComposedAnnouncement::where('status', 'pending')->paginate(10);
+        return response()->json([
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'total_pages' => $results->lastPage(),
+                'total_items' => $results->total(),
+            ]
+        ]);
+    }
+    public function getMessageDelivered(Request $request)
+    {
+        $page = $request->input('page', 1);
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = ComposedAnnouncement::where('status', 'delivered')->paginate(10);
+        return response()->json([
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'total_pages' => $results->lastPage(),
+                'total_items' => $results->total(),
+            ]
         ]);
     }
 }
