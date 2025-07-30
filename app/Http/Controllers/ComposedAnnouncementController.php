@@ -88,13 +88,13 @@ class ComposedAnnouncementController extends Controller
             'cycle' => $cycle
         ]);
     }
-    public function getMessagePending(Request $request)
+    public function getWebPending(Request $request)
     {
         $page = $request->input('page', 1);
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = ComposedAnnouncement::where('status', 'pending')->paginate(10);
+        $results = ComposedAnnouncement::where('webStatus', 'pending')->paginate(10);
         return response()->json([
             'data' => $results->items(),
             'pagination' => [
@@ -104,13 +104,47 @@ class ComposedAnnouncementController extends Controller
             ]
         ]);
     }
-    public function getMessageDelivered(Request $request)
+    public function getWebDelivered(Request $request)
     {
         $page = $request->input('page', 1);
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = ComposedAnnouncement::where('status', 'delivered')->paginate(10);
+        $results = ComposedAnnouncement::where('webStatus', 'delivered')->paginate(10);
+        return response()->json([
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'total_pages' => $results->lastPage(),
+                'total_items' => $results->total(),
+            ]
+        ]);
+    }
+
+
+    public function getSMSPending(Request $request)
+    {
+        $page = $request->input('page', 1);
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = ComposedAnnouncement::where('smsStatus', 'pending')->paginate(10);
+        return response()->json([
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'total_pages' => $results->lastPage(),
+                'total_items' => $results->total(),
+            ]
+        ]);
+    }
+    public function getSMSDelivered(Request $request)
+    {
+        $page = $request->input('page', 1);
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = ComposedAnnouncement::where('smsStatus', 'delivered')->paginate(10);
         return response()->json([
             'data' => $results->items(),
             'pagination' => [

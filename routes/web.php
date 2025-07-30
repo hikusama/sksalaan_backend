@@ -29,6 +29,10 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/valStep2Post', [ComposedAnnouncementController::class, 'valStep2Post']);
     Route::post('/compose', [ComposedAnnouncementController::class, 'compose']);
     Route::get('/dropDownCycle', [ComposedAnnouncementController::class, 'getAllCycle']);
+    Route::get('/getSMSPending', [ComposedAnnouncementController::class, 'getSMSPending']);
+    Route::get('/getSMSDelivered', [ComposedAnnouncementController::class, 'getSMSDelivered']);
+    Route::get('/getWebPending', [ComposedAnnouncementController::class, 'getWebPending']);
+    Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'gWebMSDelivered']);
 
     Route::middleware(CheckCycleOpen::class)->group(function () {
         Route::apiResource('/youth', YouthUserController::class);

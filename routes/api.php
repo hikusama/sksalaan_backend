@@ -37,8 +37,7 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     ];
 });
 
-Route::get('/getMessagePending', [ComposedAnnouncementController::class, 'getMessagePending']);
-Route::get('/getMessageDelivered', [ComposedAnnouncementController::class, 'getMessageDelivered']);
+
 Route::middleware(CheckCycleOpen::class)->group(function () {
 
     Route::post('/vals1', [ValidationFormController::class, 'valStep1']);
