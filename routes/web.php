@@ -32,7 +32,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::get('/getSMSPending', [ComposedAnnouncementController::class, 'getSMSPending']);
     Route::get('/getSMSDelivered', [ComposedAnnouncementController::class, 'getSMSDelivered']);
     Route::get('/getWebPending', [ComposedAnnouncementController::class, 'getWebPending']);
-    Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'gWebMSDelivered']);
+    Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'getWebDelivered']);
 
     Route::middleware(CheckCycleOpen::class)->group(function () {
         Route::apiResource('/youth', YouthUserController::class);
