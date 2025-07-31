@@ -150,4 +150,21 @@ class ComposedAnnouncementController extends Controller
             ]
         ]);
     }
+
+
+    public function getYouthContacts(Request $request)
+    {
+        $page = $request->input('page', 1);
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = ComposedAnnouncement::where('smsStatus', 'delivered')->paginate(10);
+        return response()->json([
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'last_pages' => $results->lastPage(),
+            ]
+        ]);
+    }
 }
