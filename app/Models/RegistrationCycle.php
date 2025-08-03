@@ -16,8 +16,4 @@ class RegistrationCycle extends Model
         'end',
     ];
 
-    public function yUser()
-    {
-        return $this->hasMany(YouthUser::class);
-    }
 }

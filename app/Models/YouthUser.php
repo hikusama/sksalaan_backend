@@ -11,7 +11,7 @@ class YouthUser extends Model
     use HasFactory;
     protected $fillable = [
         'user_id',
-        'registration_cycle_id',
+        'youth_personal_id',
         'batchNo',
         'youthType',
         'skills',
@@ -20,10 +20,7 @@ class YouthUser extends Model
 
 
     // In YouthUser.php
-    public function regCycle()
-    {
-        return $this->belongsTo(RegistrationCycle::class, 'registration_cycle_id');
-    }
+ 
     public function info()
     {
         return $this->hasOne(YouthInfo::class);
