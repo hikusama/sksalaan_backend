@@ -23,13 +23,16 @@ Route::middleware(['auth', CheckAdmin::class])->get('/web/user', function (Reque
     $cycleID = $res->id ?? null;
     $curmonth = date('n');
     $curyr = date('Y');
+    $cycle = [];
     if (!$cycleID) {
         $name = ($curmonth <= 6) ? 'cycle_1_'.$curyr : 'cycle_2_'.$curyr;
-        RegistrationCycle::create([
-            'cycleName' => $name
+        $cycle = RegistrationCycle::create([
+            'cycleName' => $name,
+            'cycleStatus' => 'active'
         ]);
     }
     return [
+        'cycle' => $cycle,
         'user' => $user,
     ];
 });

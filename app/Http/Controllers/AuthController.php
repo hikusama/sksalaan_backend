@@ -96,6 +96,18 @@ class AuthController extends Controller
 
     public function loginAdmin(Request $request)
     {
+
+        $cycleID = $this->getCycle();
+        $curmonth = date('n');
+        $curyr = date('Y');
+        $cycle = [];
+        if (!$cycleID) {
+            $name = ($curmonth <= 6) ? 'cycle_1_' . $curyr : 'cycle_2_' . $curyr;
+            $cycle = RegistrationCycle::create([
+                'cycleName' => $name,
+                'cycleStatus' => 'active'
+            ]);
+        }
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'password' => 'required',
@@ -126,7 +138,9 @@ class AuthController extends Controller
         $user = $user->load('admin');
 
         return response()->json([
-            'user' => $user
+            'user' => $user,
+            'cycle' => $cycle,
+
         ]);
     }
 

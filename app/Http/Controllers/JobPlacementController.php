@@ -125,27 +125,19 @@ class JobPlacementController extends Controller
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
-        $sortBy = $request->input('sortBy', 'fname');
         $typeId = $request->input('typeId');
 
-        $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
-        if (!in_array($sortBy, $allowedFilters)) {
-            return response()->json(['error' => 'Invalid filter field'], 400);
-        }
 
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
 
-        $results = YouthInfo::whereHas('yUser', function ($q) use ($cycleID) {
-            $q->where('registration_cycle_id', $cycleID);
+        $results = YouthInfo::whereHas('yUser', function ($q) use ($cycleID, $search) {
+            $q->where('registration_cycle_id', $cycleID)
+                ->when($search, function ($q) use ($search) {
+                    $q->where('skills', 'LIKE', '%' . $search . '%');
+                });;
         })
-            ->where(function ($query) use ($search) {
-                $query->where('fname', 'LIKE', '%' . $search . '%')
-                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                    ->orWhere('lname', 'LIKE', '%' . $search . '%');
-            })
-            ->orderBy($sortBy, 'DESC')
             ->with('yUser')
             ->addSelect([
                 'job_supports_count' => DB::table('job_supports')
@@ -164,7 +156,6 @@ class JobPlacementController extends Controller
             ->paginate($perPage)
             ->appends([
                 'q' => $search,
-                'sortBy' => $sortBy,
                 'perPage' => $perPage,
                 'page' => $page
             ]);
