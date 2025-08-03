@@ -8,6 +8,7 @@ use App\Models\civicInvolvement;
 use App\Models\EducBG;
 use App\Models\RegistrationCycle;
 use App\Models\User;
+use App\Models\ValidateYouth;
 use App\Models\YouthInfo;
 use App\Models\YouthUser;
 use Exception;
@@ -60,18 +61,19 @@ class YouthUserController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-
-        $results = YouthInfo::whereHas('yUser.regCycle', function ($q) use ($cycleID) {
+        /*
+ whereHas('yUser.regCycle', function ($q) use ($cycleID) {
             $q->where('registration_cycle_id', $cycleID);
+        }) 
+ */
+        $results = YouthInfo::where(function ($query) use ($search) {
+            $query->where('fname', 'LIKE', '%' . $search . '%')
+                ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                ->orWhereHas('yUser', function ($q) use ($search) {
+                    $q->where('batchNo', 'LIKE', '%' . $search . '%');
+                });
         })
-            ->where(function ($query) use ($search) {
-                $query->where('fname', 'LIKE', '%' . $search . '%')
-                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                    ->orWhere('lname', 'LIKE', '%' . $search . '%')
-                    ->orWhereHas('yUser', function ($q) use ($search) {
-                        $q->where('batchNo', 'LIKE', '%' . $search . '%');
-                    });
-            })
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
                 return $linked
@@ -142,8 +144,9 @@ class YouthUserController extends Controller
                 }
             }
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
+            $youth_personal_id = $this->generateUnique7DigitCode('youth_users', 'youth_personal_id');
 
-            $renamedFields['registration_cycle_id'] = $cycleID;
+            $renamedFields['youth_personal_id'] = $youth_personal_id;
             $renamedFields['batchNo'] = $batchNo;
             $renamedFields['user_id'] = $request->user()->id;
             $yUser = YouthUser::create($renamedFields);
@@ -190,6 +193,7 @@ class YouthUserController extends Controller
                 }
                 CivicInvolvement::insert($civic);
             }
+            $this->validateYouth($yUser->id);
 
 
             DB::commit();
@@ -234,7 +238,9 @@ class YouthUserController extends Controller
             }
             // $renamedFields['user_id'] = null;
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
-            $renamedFields['registration_cycle_id'] = $cycleID;
+            $youth_personal_id = $this->generateUnique7DigitCode('youth_users', 'youth_personal_id');
+
+            $renamedFields['youth_personal_id'] = $youth_personal_id;
             $renamedFields['batchNo'] = $batchNo;
             $yUser = YouthUser::create($renamedFields);
 
@@ -319,8 +325,8 @@ class YouthUserController extends Controller
             ],
             'placeOfBirth' => 'required|max:100',
             'contactNo' => 'required|max:10|min:10',
-            'height' => 'required|integer|max:300',
-            'weight' => 'required|integer|max:200',
+            'height' => 'nullable|integer|max:300',
+            'weight' => 'nullable|integer|max:200',
             'religion' => 'required|max:100',
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
@@ -339,6 +345,18 @@ class YouthUserController extends Controller
             }
         }
         return $renamedFields;
+    }
+
+
+    public function validateYouth(int $id)
+    {
+        $cycleID = $this->getCycle();
+        if (!$cycleID) {
+            ValidateYouth::create([
+                'youth_user_id' => $id,
+                'registration_cycle_id' => $cycleID,
+            ]);
+        }
     }
 
 
@@ -366,7 +384,7 @@ class YouthUserController extends Controller
                 'educBg.*.level' => 'required|string|max:255',
                 'educBg.*.nameOfSchool' => 'required|string|max:255',
                 'educBg.*.pod' => 'required|string|max:255',
-                'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+                'educBg.*.yearGraduate' => 'nullable|integer|between:1995,2100',
             ]);
         }
         return false;
@@ -449,15 +467,16 @@ class YouthUserController extends Controller
         // $uuid = 2;
         DB::beginTransaction();
         try {
+            $youth_personal_id = $this->generateUnique7DigitCode('youth_users', 'youth_personal_id');
 
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
             foreach ($readyData as $youth) {
+                $rgid = $youth['user']['id'];
                 unset($youth['user']['id']);
 
                 $userData = array_merge($youth['user'], [
                     'user_id' => $uuid,
-                    'batchNo' => $batchNo,
-                    'registration_cycle_id' => $cycleID,
+                    'youth_personal_id' => $youth_personal_id,
                 ]);
                 $youth_user_id = DB::table('youth_users')->insertGetId($userData);
 
@@ -484,6 +503,7 @@ class YouthUserController extends Controller
                         }
                     }
                 }
+                $this->validateYouth($rgid);
             }
 
             // DB::rollBack();
@@ -531,8 +551,8 @@ class YouthUserController extends Controller
             ],
             'placeOfBirth' => 'required|max:100',
             'contactNo' => 'required|max:10|min:10',
-            'height' => 'required|integer|max:300',
-            'weight' => 'required|integer|max:200',
+            'height' => 'nullable|integer|max:300',
+            'weight' => 'nullable|integer|max:200',
             'religion' => 'required|max:100',
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
@@ -551,14 +571,13 @@ class YouthUserController extends Controller
             fn($item) =>
             !empty($item['level']) ||
                 !empty($item['nameOfSchool']) ||
-                !empty($item['periodOfAttendance']) ||
-                !empty($item['yearGraduate'])
+                !empty($item['periodOfAttendance'])
         )->isNotEmpty()) {
             return $request->validate([
                 'educBg.*.level' => 'required|string|max:255',
                 'educBg.*.nameOfSchool' => 'required|string|max:255',
                 'educBg.*.periodOfAttendance' => 'required|string|max:255',
-                'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+                'educBg.*.yearGraduate' => 'nullable|integer|between:1995,2100',
                 'educBg.*.created_at' => 'nullable|date|date_format:Y-m-d',
             ]);
         }
@@ -614,6 +633,7 @@ class YouthUserController extends Controller
         }
         $user = User::findOrFail($request->input('user_id'));
         $yUser = YouthUser::findOrFail($request->input('youthid'));
+        $this->validateYouth($yUser->id);
         $yUser->user_id =  $user->id;
         $yUser->save();
         return 'Success';

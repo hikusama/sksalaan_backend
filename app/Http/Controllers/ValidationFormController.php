@@ -39,8 +39,8 @@ class ValidationFormController extends Controller
             'placeOfBirth' => 'required|max:100',
             'noOfChildren' => 'nullable|max:100',
             'contactNo' => 'required|regex:/^9\d{9}$/',
-            'height' => 'required|integer|max:200',
-            'weight' => 'required|integer|max:100',
+            'height' => 'nullable|integer|max:200',
+            'weight' => 'nullable|integer|max:100',
             'civilStatus' => 'required|max:50',
             'occupation' => 'nullable|max:100',
             'religion' => 'required|max:100',
@@ -54,15 +54,14 @@ class ValidationFormController extends Controller
             if (collect($request->educBg)->filter(function ($item) {
                 return !empty($item['level']) ||
                     !empty($item['nameOfSchool']) ||
-                    !empty($item['pod']) ||
-                    !empty($item['yearGraduate']);
+                    !empty($item['pod']) ;
             })->isNotEmpty()) {
                 $request->validate([
                     'educBg' => 'array|min:1',
                     'educBg.*.level' => 'required|string|max:255',
                     'educBg.*.nameOfSchool' => 'required|string|max:255',
                     'educBg.*.pod' => 'required|string|max:255',
-                    'educBg.*.yearGraduate' => 'required|integer|between:1995,2100',
+                    'educBg.*.yearGraduate' => 'nullable|integer|between:1995,2100',
                 ]);
             }
             return true;
@@ -110,14 +109,13 @@ class ValidationFormController extends Controller
         if (
             $request->filled('level') ||
             $request->filled('nameOfSchool') ||
-            $request->filled('pod') ||
-            $request->filled('yearGraduate')
+            $request->filled('pod') 
         ) {
             $request->validate([
                 'level' => 'required|string|max:255',
                 'nameOfSchool' => 'required|string|max:255',
                 'pod' => 'required|string|max:255',
-                'yearGraduate' => 'required|integer|between:1995,2100',
+                'yearGraduate' => 'nullable|integer|between:1995,2100',
             ]);
             return true;
         }
