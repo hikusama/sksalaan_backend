@@ -11,13 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('youth_users', function (Blueprint $table) {
+        Schema::create('validated_youths', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->integer('batchNo');
-            $table->string('youth_personal_id');
-            $table->string('youthType');
-            $table->string('skills');
+            $table->foreignId('youth_user_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('registration_cycle_id')->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
     }
@@ -27,8 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('youth_users');
+        //
+        Schema::dropIfExists('validated_youths');
     }
 };
-
- 

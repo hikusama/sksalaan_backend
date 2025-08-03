@@ -63,11 +63,7 @@ class BulkLoggerController extends Controller
 
     public function bulkDelete(Request $request, $batchNo)
     {
-        $cycleID = $this->getCycle();
-
-        if (!$cycleID) {
-            return response()->json(['error' => 'No active cycle.'], 400);
-        }
+ 
         $bulkData = Bulk_logger::where('batchNo', $batchNo)->firstOrFail();
         Bulk_logger::destroy($bulkData->id);
         return response()->json([
