@@ -22,8 +22,8 @@ return new class extends Migration
             $table->timestamp('dateOfBirth');
             $table->string('placeOfBirth');
             $table->integer('contactNo');
-            $table->integer('height');
-            $table->integer('weight');
+            $table->integer('height')->nullable();
+            $table->integer('weight')->nullable();
             $table->string('religion');
             $table->string('occupation')->nullable();
             $table->string('sex');
