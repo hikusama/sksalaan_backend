@@ -16,12 +16,16 @@ class ComposedAnnouncement extends Model
         'when',
         'where',
         'what',
-        'cycle',
+        'registration_cycle_id',
         'addresses',
         'description',
     ];
-}
 
+    public function regCycle()
+    {
+        return $this->belongsTo(RegistrationCycle::class, 'registration_cycle_id');
+    }
+}
 
 /*
 $table->string('status')->default('pending');

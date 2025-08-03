@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('where');
             $table->string('what');
             $table->string('addresses');
-            $table->string('cycle');
+            $table->foreignId('registration_cycle_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('description');
             $table->timestamps();
         });

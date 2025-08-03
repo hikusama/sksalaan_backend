@@ -19,6 +19,16 @@ use Illuminate\Support\Facades\Auth;
 
 Route::middleware(['auth', CheckAdmin::class])->get('/web/user', function (Request $request) {
     $user = $request->user()->load('admin');
+    $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+    $cycleID = $res->id ?? null;
+    $curmonth = date('n');
+    $curyr = date('Y');
+    if (!$cycleID) {
+        $name = ($curmonth <= 6) ? 'cycle_1_'.$curyr : 'cycle_2_'.$curyr;
+        RegistrationCycle::create([
+            'cycleName' => $name
+        ]);
+    }
     return [
         'user' => $user,
     ];
@@ -34,23 +44,22 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::get('/getWebPending', [ComposedAnnouncementController::class, 'getWebPending']);
     Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'getWebDelivered']);
 
-    Route::middleware(CheckCycleOpen::class)->group(function () {
-        Route::apiResource('/youth', YouthUserController::class);
-        Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
-        Route::post('/search', [YouthUserController::class, 'searchName']);
-        Route::apiResource('/supah', Supabase::class);
-        Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
-        Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
-        Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
-        Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
-        Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
-        Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
-        Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);
-        Route::post('/bulkGetBatchContent', [BulkLoggerController::class, 'bulkGetBatchContent']);
-        Route::post('/bulkGet', [BulkLoggerController::class, 'bulkGet']);
-        Route::delete('/bulkDelete/{batchNo}', [BulkLoggerController::class, 'bulkDelete']);
-        Route::post('/export-excel', [XportExcel::class, 'export']);
-    });
+    Route::apiResource('/youth', YouthUserController::class);
+    Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
+    Route::post('/search', [YouthUserController::class, 'searchName']);
+    Route::apiResource('/supah', Supabase::class);
+    Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
+    Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
+    Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
+    Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
+    Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
+    Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
+    Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);
+    Route::post('/bulkGetBatchContent', [BulkLoggerController::class, 'bulkGetBatchContent']);
+    Route::post('/bulkGet', [BulkLoggerController::class, 'bulkGet']);
+    Route::delete('/bulkDelete/{batchNo}', [BulkLoggerController::class, 'bulkDelete']);
+    Route::post('/export-excel', [XportExcel::class, 'export']);
+
     Route::post('/user/modify', [AuthController::class, 'modifyUser']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/searchSkOfficial', [AuthController::class, 'searchSkOfficial']);

@@ -52,7 +52,7 @@ class ComposedAnnouncementController extends Controller
             'where' => 'required|max:60',
             'what' => 'required|max:60',
             'description' => 'required|max:120',
-            'cycle' => 'required|exists:registration_cycles,cycleName',
+            'registration_cycle_id' => 'required|exists:registration_cycles,cycleName',
             'addresses' => [
                 function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
@@ -61,6 +61,8 @@ class ComposedAnnouncementController extends Controller
                 }
             ]
         ]);
+
+        $cycle = RegistrationCycle::where('cycleName',$fields['registration_cycle_id'])->first();
 
         $selectedString = collect($fields['addresses'])
             ->filter(fn($v) => $v === true)
