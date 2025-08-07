@@ -21,6 +21,10 @@ class YouthUser extends Model
 
     // In YouthUser.php
  
+    public function validated()
+    {
+        return $this->hasMany(ValidateYouth::class);
+    }
     public function info()
     {
         return $this->hasOne(YouthInfo::class);

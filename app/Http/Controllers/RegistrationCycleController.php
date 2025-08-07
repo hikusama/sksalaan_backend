@@ -70,7 +70,7 @@ class RegistrationCycleController extends Controller
                 $cycleToEnd = RegistrationCycle::findOrFail($toend);
                 $cycleToEnd->end = now();
                 $cycleToEnd->save();
-            } 
+            }
             $cycle = RegistrationCycle::findOrFail($cycleID);
 
             RegistrationCycle::where('cycleStatus', 'active')
@@ -100,18 +100,12 @@ class RegistrationCycleController extends Controller
 
     public function show(Request $request)
     {
-        $page = $request->input('page', 1);
-        Paginator::currentPageResolver(function () use ($page) {
-            return $page;
-        });
-        $results = RegistrationCycle::withCount('yUser')->paginate(10);
+
+        $results = RegistrationCycle::withCount('validatedYouths')->orderBy('created_at', 'DESC')->get();
 
         return response()->json([
-            'data' => $results->items(),
-            'pagination' => [
-                'current_page' => $results->currentPage(),
-                'last_pages' => $results->lastPage(),
-            ]
+            'data' => $results,
+
         ]);
     }
 }

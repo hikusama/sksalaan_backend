@@ -54,7 +54,7 @@ class ValidationFormController extends Controller
             if (collect($request->educBg)->filter(function ($item) {
                 return !empty($item['level']) ||
                     !empty($item['nameOfSchool']) ||
-                    !empty($item['pod']) ;
+                    !empty($item['pod']);
             })->isNotEmpty()) {
                 $request->validate([
                     'educBg' => 'array|min:1',
@@ -109,7 +109,7 @@ class ValidationFormController extends Controller
         if (
             $request->filled('level') ||
             $request->filled('nameOfSchool') ||
-            $request->filled('pod') 
+            $request->filled('pod')
         ) {
             $request->validate([
                 'level' => 'required|string|max:255',
@@ -155,5 +155,36 @@ class ValidationFormController extends Controller
             'yearGraduated' => 'nullable',
         ]);
         return true;
+    }
+
+
+    public function valAge(Request $request)
+    {
+        $type = $request->get('ageType');
+        $allowed = ['range', 'single'];
+
+        if (!in_array($type, $allowed)) {
+            return response()->json([
+                "type" => $type,
+                'error' => [
+                    'fail' => "Something went wrong."
+                ]
+            ], 400);
+        }
+
+        if ($type === "range") {
+            $request->validate([
+                'min' => 'required|integer|min:15|max:29',
+                'max' => 'required|integer|min:' . $request->get('min')+1 . '|max:30',
+            ]);
+        } else {
+            $request->validate([
+                'min' => 'required|integer|min:15|max:28',
+            ]);
+        }
+
+        return response()->json([
+            'message'=>"success"
+        ]);
     }
 }

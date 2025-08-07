@@ -16,4 +16,8 @@ class RegistrationCycle extends Model
         'end',
     ];
 
+    public function validatedYouths()
+    {
+        return $this->hasMany(ValidateYouth::class);
+    }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\ComposedAnnouncementController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\RegistrationCycleController;
 use App\Http\Controllers\Supabase;
+use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthDataExportController;
 use App\Http\Controllers\YouthInfoController;
@@ -70,6 +71,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
 
     Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
+    Route::post('/valAge', [ValidationFormController::class, 'valAge']);
     Route::put('/runCycle', [RegistrationCycleController::class, 'runCycle']);
     Route::delete('/deleteCycle/{id}', [RegistrationCycleController::class, 'deleteCycle']);
     Route::put('/stopCycle', [RegistrationCycleController::class, 'stopCycle']);

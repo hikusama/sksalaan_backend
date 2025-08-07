@@ -42,16 +42,23 @@ class YouthUserController extends Controller
     public function searchName(Request $request)
     {
 
+
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
         $sortBy = $request->input('sortBy', 'fname');
         $typeId = $request->input('typeId');
-        $cycleID = $this->getCycle();
+        $cycleID = $request->input('cID');
 
-        if (!$cycleID) {
-            return response()->json(['error' => 'No active cycle.'], 400);
-        }
+        $youthType = strtolower($request->input('youthType'));
+        $sex = strtolower($request->input('sex'));
+        $gender = strtolower($request->input('gender'));
+        $civilStatus = strtolower($request->input('civilStatus'));
+        $ageType = $request->input('ageType');
+        $ageValue = $request->input('ageValue', []);
+
+
+        RegistrationCycle::findOrFail($cycleID);
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
         if (!in_array($sortBy, $allowedFilters)) {
@@ -61,12 +68,10 @@ class YouthUserController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        /*
- whereHas('yUser.regCycle', function ($q) use ($cycleID) {
+
+        $results = YouthInfo::whereHas('yUser.validated', function ($q) use ($cycleID) {
             $q->where('registration_cycle_id', $cycleID);
-        }) 
- */
-        $results = YouthInfo::where(function ($query) use ($search) {
+        })->where(function ($query) use ($search) {
             $query->where('fname', 'LIKE', '%' . $search . '%')
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%')
@@ -74,6 +79,17 @@ class YouthUserController extends Controller
                     $q->where('batchNo', 'LIKE', '%' . $search . '%');
                 });
         })
+            ->when(!empty($youthType), fn($q) => $q->where('youthType', $youthType))
+            ->when(!empty($sex), fn($q) => $q->where('sex', $sex))
+            ->when(!empty($gender), fn($q) => $q->where('gender', $gender))
+            ->when(!empty($civilStatus), fn($q) => $q->where('civilStatus', $civilStatus))
+
+            ->when($ageType === 'single' && !empty($ageValue['min']), function ($q) use ($ageValue) {
+                $q->where('age', intval($ageValue['min']));
+            })
+            ->when($ageType === 'range' && !empty($ageValue['min']) && !empty($ageValue['max']), function ($q) use ($ageValue) {
+                $q->whereBetween('age', [intval($ageValue['min']), intval($ageValue['max'])]);
+            })
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
                 return $linked
@@ -91,13 +107,8 @@ class YouthUserController extends Controller
                 'yUser.civicInvolvement'
             ])
             ->paginate($perPage)
-            ->appends([
-                'q' => $search,
-                'typeId' => $typeId,
-                'sortBy' => $sortBy,
-                'perPage' => $perPage,
-                'page' => $page
-            ]);
+            ->appends($request->all());
+
 
         $pass = $results->map(function ($info) {
             return [
@@ -193,7 +204,10 @@ class YouthUserController extends Controller
                 }
                 CivicInvolvement::insert($civic);
             }
-            $this->validateYouth($yUser->id);
+            ValidateYouth::create([
+                'youth_user_id' => $yUser->id,
+                'registration_cycle_id' => $cycleID,
+            ]);
 
 
             DB::commit();
@@ -503,7 +517,10 @@ class YouthUserController extends Controller
                         }
                     }
                 }
-                $this->validateYouth($rgid);
+                ValidateYouth::create([
+                    'youth_user_id' => $rgid,
+                    'registration_cycle_id' => $cycleID,
+                ]);
             }
 
             // DB::rollBack();
@@ -633,7 +650,10 @@ class YouthUserController extends Controller
         }
         $user = User::findOrFail($request->input('user_id'));
         $yUser = YouthUser::findOrFail($request->input('youthid'));
-        $this->validateYouth($yUser->id);
+        ValidateYouth::create([
+            'youth_user_id' => $yUser->id,
+            'registration_cycle_id' => $cycleID,
+        ]);
         $yUser->user_id =  $user->id;
         $yUser->save();
         return 'Success';
