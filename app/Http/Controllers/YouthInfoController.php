@@ -15,6 +15,11 @@ class YouthInfoController extends Controller
     /**
      * Display a listing of the resource.   
      */
+
+    
+    public function getMapData(){
+
+    }
     public function getInfoData()
     {
         $cycleID = $this->getCycle();
@@ -40,7 +45,7 @@ class YouthInfoController extends Controller
 
         $gender = YouthInfo::select(DB::raw("COALESCE(NULLIF(LOWER(gender), ''), 'not-specified') as name"), DB::raw('COUNT(*) as value'))
             ->where(function ($q) {
-                $q->whereRaw("LOWER(gender) IN ('non-binary', 'transgender', 'agender', 'bigender', 'others')")
+                $q->whereRaw("LOWER(gender) IN ('non-binary', 'binary')")
                     ->orWhereNull('gender')
                     ->orWhere('gender', '');
             })
