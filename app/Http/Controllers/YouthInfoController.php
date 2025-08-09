@@ -17,11 +17,10 @@ class YouthInfoController extends Controller
      */
 
 
-    public function getMapData(Request $request) {
+    public function getMapData(Request $request)
+    {
         // 
         $cycleID = $request->input('cID');
-
-        
     }
     public function getInfoData(Request $request)
     {
@@ -57,15 +56,23 @@ class YouthInfoController extends Controller
             })
             ->groupBy('name')
             ->get();
+        $driver = DB::getDriverName();
 
-        $ages = YouthInfo::select('age', DB::raw('COUNT(*) as count'))
-            ->whereIn('age', range(15, 30))
+        if ($driver === 'sqlite') {
+            $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
+        } else {
+            $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
+        }
+
+        $ages = YouthInfo::selectRaw("$ageExpression as age, COUNT(*) as count")
+            ->whereBetween(DB::raw($ageExpression), [15, 30])
             ->whereHas('yUser.validated', function ($q) use ($cycleID) {
                 $q->where('registration_cycle_id', $cycleID);
             })
             ->groupBy('age')
             ->orderBy('age')
             ->get();
+
 
         $civilStats = YouthInfo::select(DB::raw("LOWER(civilStatus) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(civilStatus) IN ('single', 'married', 'divorce', 'outside-marriage')")
