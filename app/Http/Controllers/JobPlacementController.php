@@ -167,7 +167,6 @@ class JobPlacementController extends Controller
                 'fname' => $info->fname,
                 'mname' => $info->mname,
                 'lname' => $info->lname,
-                'age' => $info->age,
                 'jobCount' => $info->job_supports_count,
                 'created_at' => $info->created_at,
                 'user' => $info->yUser,

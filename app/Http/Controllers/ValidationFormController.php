@@ -22,7 +22,6 @@ class ValidationFormController extends Controller
                 'before_or_equal:' . now()->subYears(15)->format('Y-m-d'),
                 'after_or_equal:' . now()->subYears(30)->format('Y-m-d'),
             ],
-            'age' => 'required|integer|between:15,30',
             'address' => 'required|max:100',
         ]);
         return true;
