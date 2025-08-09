@@ -24,13 +24,33 @@ class YouthInfoController extends Controller
     }
     public function getInfoData(Request $request)
     {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'sqlite') {
+            $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
+        } else {
+            $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
+        }
+
         $cycleID = $request->input('cID');
+        $qualification = strtolower($request->input('qualification', 'qualified'));
 
         if ($cycleID !== 'all') {
             RegistrationCycle::findOrFail($cycleID);
         }
 
-
+        // Reusable qualification filter
+        $applyQualification = function ($query) use ($qualification, $ageExpression) {
+            if ($qualification === 'qualified') {
+                $query->whereBetween(DB::raw($ageExpression), [15, 30]);
+            } elseif ($qualification === 'unqualified') {
+                $query->where(function ($sub) use ($ageExpression) {
+                    $sub->where(DB::raw($ageExpression), '<', 15)
+                        ->orWhere(DB::raw($ageExpression), '>', 30);
+                });
+            }
+            // "all" → do nothing
+        };
 
         $yt = YouthUser::select(DB::raw("LOWER(youthType) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(youthType) IN ('isy', 'osy')")
@@ -40,6 +60,9 @@ class YouthInfoController extends Controller
                 });
             })
             ->whereNotNull('user_id')
+            ->when($qualification !== 'all', function ($qq) use ($applyQualification) {
+                $qq->whereHas('info', $applyQualification);
+            })
             ->groupBy('name')
             ->get();
 
@@ -50,6 +73,7 @@ class YouthInfoController extends Controller
                     $q->where('registration_cycle_id', $cycleID);
                 });
             })
+            ->when($qualification !== 'all', $applyQualification)
             ->groupBy('name')
             ->get();
 
@@ -64,27 +88,20 @@ class YouthInfoController extends Controller
                     $q->where('registration_cycle_id', $cycleID);
                 });
             })
+            ->when($qualification !== 'all', $applyQualification)
             ->groupBy('name')
             ->get();
-        $driver = DB::getDriverName();
-
-        if ($driver === 'sqlite') {
-            $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
-        } else {
-            $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
-        }
 
         $ages = YouthInfo::selectRaw("$ageExpression as age, COUNT(*) as count")
-            ->whereBetween(DB::raw($ageExpression), [15, 30])
             ->when($cycleID !== 'all', function ($qq) use ($cycleID) {
                 $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
                     $q->where('registration_cycle_id', $cycleID);
                 });
             })
+            ->when($qualification !== 'all', $applyQualification)
             ->groupBy('age')
             ->orderBy('age')
             ->get();
-
 
         $civilStats = YouthInfo::select(DB::raw("LOWER(civilStatus) as name"), DB::raw('COUNT(*) as value'))
             ->whereRaw("LOWER(civilStatus) IN ('single', 'married', 'divorce', 'outside-marriage')")
@@ -93,6 +110,7 @@ class YouthInfoController extends Controller
                     $q->where('registration_cycle_id', $cycleID);
                 });
             })
+            ->when($qualification !== 'all', $applyQualification)
             ->groupBy('name')
             ->orderBy('name')
             ->get();
@@ -104,6 +122,7 @@ class YouthInfoController extends Controller
                     $q->where('registration_cycle_id', $cycleID);
                 });
             })
+            ->when($qualification !== 'all', $applyQualification)
             ->groupBy('name')
             ->orderBy('name')
             ->get();
@@ -117,6 +136,7 @@ class YouthInfoController extends Controller
             'youthType' => $yt,
         ]);
     }
+
 
 
 
