@@ -18,25 +18,43 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
+
+
 Route::middleware(['auth', CheckAdmin::class])->get('/web/user', function (Request $request) {
     $user = $request->user()->load('admin');
-    $res = RegistrationCycle::where('cycleStatus', 'active')->first();
-    $cycleID = $res->id ?? null;
-    $curmonth = date('n');
+
+    $curmonth = date('n'); 
     $curyr = date('Y');
-    $cycle = [];
-    if (!$cycleID) {
-        $name = ($curmonth <= 6) ? 'cycle_1_'.$curyr : 'cycle_2_'.$curyr;
-        $cycle = RegistrationCycle::create([
-            'cycleName' => $name,
-            'cycleStatus' => 'active'
-        ]);
+
+    $currentCycleName = ($curmonth <= 6)
+        ? 'cycle_1_' . $curyr
+        : 'cycle_2_' . $curyr;
+
+    $activeCycle = RegistrationCycle::where('cycleStatus', 'active')->first();
+
+    if (!$activeCycle || $activeCycle->cycleName !== $currentCycleName) {
+        RegistrationCycle::query()->update(['cycleStatus' => 'inactive']);
+
+        $cycle = RegistrationCycle::where('cycleName', $currentCycleName)->first();
+
+        if (!$cycle) {
+            $cycle = RegistrationCycle::create([
+                'cycleName' => $currentCycleName,
+                'cycleStatus' => 'active'
+            ]);
+        } else {
+            $cycle->update(['cycleStatus' => 'active']);
+        }
+    } else {
+        $cycle = $activeCycle;
     }
+
     return [
         'cycle' => $cycle,
         'user' => $user,
     ];
 });
+
 
 Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function () {
     Route::post('/valStep1Post', [ComposedAnnouncementController::class, 'valStep1Post']);
