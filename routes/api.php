@@ -12,30 +12,54 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
+ 
 
 Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request) {
     $token = $request->user()->currentAccessToken();
-    $res = RegistrationCycle::where('cycleStatus', 'active')->first();
-    $cycleID = $res->id ?? null;
-    try {
-        //code...
 
-        if (!$cycleID) {
+    $curMonth = date('n');
+    $curYear  = date('Y');
+    $activeCycle = RegistrationCycle::where('cycleStatus', 'active')->first();
+
+    if (!$activeCycle) {
+        RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inactive']);
+
+        $cycleName = ($curMonth <= 6)
+            ? "cycle_1_{$curYear}"
+            : "cycle_2_{$curYear}";
+
+        $activeCycle = RegistrationCycle::firstOrCreate(
+            ['cycleName' => $cycleName],
+            ['cycleStatus' => 'active']
+        );
+
+        if ($activeCycle->cycleStatus !== 'active') {
+            $activeCycle->update(['cycleStatus' => 'active']);
+        }
+    }
+
+    try {
+        if (!$activeCycle) {
             $request->user()->tokens()->delete();
             return response()->json(['auth' => 'No active cycle.'], 400);
         }
+
         if ($token && $token->expires_at && now()->greaterThan($token->expires_at)) {
             $request->user()->tokens()->delete();
             return response()->json(['message' => 'Token expired'], 401);
         }
+
         $user = $request->user()->load('skofficials');
     } catch (\Throwable $th) {
-        Log::info("4545:" . $th->getMessage());
+        return response()->json(['error' => 'Server error'], 500);
     }
+
     return [
-        'user' => $user,
+        'user'  => $user,
+        'cycle' => $activeCycle,
     ];
 });
+
 
 
 Route::middleware(CheckCycleOpen::class)->group(function () {
