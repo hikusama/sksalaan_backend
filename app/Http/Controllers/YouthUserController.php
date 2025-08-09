@@ -37,12 +37,8 @@ class YouthUserController extends Controller
      */
 
 
-
-
     public function searchName(Request $request)
     {
-
-
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
@@ -56,7 +52,14 @@ class YouthUserController extends Controller
         $civilStatus = strtolower($request->input('civilStatus'));
         $ageType = $request->input('ageType');
         $ageValue = $request->input('ageValue', []);
+        $qualification = strtolower($request->input('qualification', ''));
 
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
+        } else {
+            $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
+        }
 
         RegistrationCycle::findOrFail($cycleID);
 
@@ -69,27 +72,44 @@ class YouthUserController extends Controller
             return $page;
         });
 
-        $results = YouthInfo::whereHas('yUser.validated', function ($q) use ($cycleID) {
+        $query = YouthInfo::whereHas('yUser.validated', function ($q) use ($cycleID) {
             $q->where('registration_cycle_id', $cycleID);
-        })->where(function ($query) use ($search) {
-            $query->where('fname', 'LIKE', '%' . $search . '%')
-                ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%')
-                ->orWhereHas('yUser', function ($q) use ($search) {
-                    $q->where('batchNo', 'LIKE', '%' . $search . '%');
-                });
         })
+            ->where(function ($query) use ($search) {
+                $query->where('fname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('yUser', function ($q) use ($search) {
+                        $q->where('batchNo', 'LIKE', '%' . $search . '%');
+                    });
+            })
             ->when(!empty($youthType), fn($q) => $q->where('youthType', $youthType))
             ->when(!empty($sex), fn($q) => $q->where('sex', $sex))
             ->when(!empty($gender), fn($q) => $q->where('gender', $gender))
             ->when(!empty($civilStatus), fn($q) => $q->where('civilStatus', $civilStatus))
+            ->when(true, function ($q) use ($request, $ageType, $ageValue, $ageExpression) {
+                $qualification = strtolower($request->input('qualification', ''));
 
-            ->when($ageType === 'single' && !empty($ageValue['min']), function ($q) use ($ageValue) {
-                $q->where('age', intval($ageValue['min']));
+                if ($qualification === 'qualified') {
+                    // Apply only the filters coming from the frontend
+                    if ($ageType === 'single' && !empty($ageValue['min'])) {
+                        $q->whereRaw("$ageExpression = ?", [intval($ageValue['min'])]);
+                    }
+                    if ($ageType === 'range' && !empty($ageValue['min']) && !empty($ageValue['max'])) {
+                        $q->whereBetween(DB::raw($ageExpression), [
+                            intval($ageValue['min']),
+                            intval($ageValue['max'])
+                        ]);
+                    }
+                } elseif ($qualification === 'unqualified') {
+                    // Unqualified means outside 15–30
+                    $q->where(function ($sub) use ($ageExpression) {
+                        $sub->where(DB::raw($ageExpression), '<', 15)
+                            ->orWhere(DB::raw($ageExpression), '>', 30);
+                    });
+                }
             })
-            ->when($ageType === 'range' && !empty($ageValue['min']) && !empty($ageValue['max']), function ($q) use ($ageValue) {
-                $q->whereBetween('age', [intval($ageValue['min']), intval($ageValue['max'])]);
-            })
+
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
                 return $linked
@@ -100,16 +120,22 @@ class YouthUserController extends Controller
                         $q->whereNull('user_id');
                     });
             })
-            ->orderBy($sortBy, 'DESC')
             ->with([
                 'yUser',
                 'yUser.educbg',
                 'yUser.civicInvolvement'
-            ])
-            ->paginate($perPage)
-            ->appends($request->all());
+            ]);
 
+        // Handle sorting by age without selecting it
+        if ($sortBy === 'age') {
+            $query->orderByRaw("$ageExpression DESC");
+        } else {
+            $query->orderBy($sortBy, 'DESC');
+        }
 
+        $results = $query->paginate($perPage)->appends($request->all());
+
+        // Keep the same structure for frontend
         $pass = $results->map(function ($info) {
             return [
                 'youthUser' => [
@@ -127,6 +153,9 @@ class YouthUserController extends Controller
             ]
         ]);
     }
+
+
+
 
 
     /**
