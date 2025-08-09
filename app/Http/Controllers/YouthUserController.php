@@ -61,7 +61,9 @@ class YouthUserController extends Controller
             $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
         }
 
-        RegistrationCycle::findOrFail($cycleID);
+        if ($cycleID !== 'all') {
+            RegistrationCycle::findOrFail($cycleID);
+        }
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
         if (!in_array($sortBy, $allowedFilters)) {
@@ -71,9 +73,13 @@ class YouthUserController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-
-        $query = YouthInfo::whereHas('yUser.validated', function ($q) use ($cycleID) {
-            $q->where('registration_cycle_id', $cycleID);
+        // whereHas('yUser.validated', function ($q) use ($cycleID) {
+        //             $q->where('registration_cycle_id', $cycleID);
+        //         })
+        $query = YouthInfo::when($cycleID !== 'all', function ($qq) use ($cycleID) {
+            $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                $q->where('registration_cycle_id', $cycleID);
+            });
         })
             ->where(function ($query) use ($search) {
                 $query->where('fname', 'LIKE', '%' . $search . '%')
