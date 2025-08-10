@@ -46,23 +46,25 @@ class YouthUserController extends Controller
         $typeId = $request->input('typeId');
         $cycleID = $request->input('cID');
 
-        $youthType = strtolower($request->input('youthType'));
-        $sex = strtolower($request->input('sex'));
-        $gender = strtolower($request->input('gender'));
-        $civilStatus = strtolower($request->input('civilStatus'));
-        $ageType = $request->input('ageType');
-        $ageValue = $request->input('ageValue', []);
-        $qualification = strtolower($request->input('qualification', 'qualified')); // default to qualified
+        if ($typeId) {
+            $youthType = strtolower($request->input('youthType'));
+            $sex = strtolower($request->input('sex'));
+            $gender = strtolower($request->input('gender'));
+            $civilStatus = strtolower($request->input('civilStatus'));
+            $ageType = $request->input('ageType');
+            $ageValue = $request->input('ageValue', []);
+            $qualification = strtolower($request->input('qualification', 'qualified'));
 
-        $driver = DB::getDriverName();
-        if ($driver === 'sqlite') {
-            $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
-        } else {
-            $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
-        }
+            $driver = DB::getDriverName();
+            if ($driver === 'sqlite') {
+                $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
+            } else {
+                $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
+            }
 
-        if ($cycleID !== 'all') {
-            RegistrationCycle::findOrFail($cycleID);
+            if ($cycleID !== 'all') {
+                RegistrationCycle::findOrFail($cycleID);
+            }
         }
 
         $allowedFilters = ['fname', 'lname', 'age', 'created_at'];
@@ -74,9 +76,11 @@ class YouthUserController extends Controller
             return $page;
         });
 
-        $query = YouthInfo::when($cycleID !== 'all', function ($qq) use ($cycleID) {
-            $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
-                $q->where('registration_cycle_id', $cycleID);
+        $query = YouthInfo::when($typeId, function ($qid) use ($cycleID) {
+            $qid->when($cycleID !== 'all', function ($qq) use ($cycleID) {
+                $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                    $q->where('registration_cycle_id', $cycleID);
+                });
             });
         })
             ->where(function ($query) use ($search) {
@@ -93,7 +97,24 @@ class YouthUserController extends Controller
             ->when(!empty($civilStatus), fn($q) => $q->where('civilStatus', $civilStatus))
 
             // Qualification filtering
-            ->when(true, function ($q) use ($qualification, $ageType, $ageValue, $ageExpression) {
+
+            ->when(!is_null($typeId), function ($query) use ($typeId) {
+                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
+                return $linked
+                    ? $query->whereHas('yUser', function ($q) {
+                        $q->whereNotNull('user_id');
+                    })
+                    : $query->whereHas('yUser', function ($q) {
+                        $q->whereNull('user_id');
+                    });
+            })
+            ->with([
+                'yUser',
+                'yUser.educbg',
+                'yUser.civicInvolvement'
+            ]);
+        if ($typeId) {
+            $query->when(true, function ($q) use ($qualification, $ageType, $ageValue, $ageExpression) {
                 if ($qualification === 'unqualified') {
                     $q->where(function ($sub) use ($ageExpression) {
                         $sub->where(DB::raw($ageExpression), '<', 15)
@@ -112,23 +133,8 @@ class YouthUserController extends Controller
                         $q->whereBetween(DB::raw($ageExpression), [15, 30]);
                     }
                 }
-            })
-
-            ->when(!is_null($typeId), function ($query) use ($typeId) {
-                $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
-                return $linked
-                    ? $query->whereHas('yUser', function ($q) {
-                        $q->whereNotNull('user_id');
-                    })
-                    : $query->whereHas('yUser', function ($q) {
-                        $q->whereNull('user_id');
-                    });
-            })
-            ->with([
-                'yUser',
-                'yUser.educbg',
-                'yUser.civicInvolvement'
-            ]);
+            });
+        }
 
         // Handle sorting by age without selecting it
         if ($sortBy === 'age') {
