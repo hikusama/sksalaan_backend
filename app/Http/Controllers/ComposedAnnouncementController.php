@@ -14,7 +14,7 @@ class ComposedAnnouncementController extends Controller
     public function valStep1Post(Request $request)
     {
         $fields = $request->validate([
-            'cycle' => 'required|exists:registration_cycles,cycleName',
+            'cycleName' => 'required|exists:registration_cycles,cycleName',
             'addresses' => [
                 function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
@@ -52,7 +52,7 @@ class ComposedAnnouncementController extends Controller
             'where' => 'required|max:60',
             'what' => 'required|max:60',
             'description' => 'required|max:120',
-            'registration_cycle_id' => 'required|exists:registration_cycles,cycleName',
+            'cycleName' => 'required|exists:registration_cycles,cycleName',
             'addresses' => [
                 function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
@@ -62,7 +62,7 @@ class ComposedAnnouncementController extends Controller
             ]
         ]);
 
-        $cycle = RegistrationCycle::where('cycleName',$fields['registration_cycle_id'])->first();
+        $cycle = RegistrationCycle::where('cycleName',$fields['cycleName'])->first();
 
         $selectedString = collect($fields['addresses'])
             ->filter(fn($v) => $v === true)
