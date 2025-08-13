@@ -74,7 +74,6 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
     Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
     Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
-    Route::put('/payYouth', [JobPlacementController::class, 'payYouth']);
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
     Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);
     Route::post('/bulkGetBatchContent', [BulkLoggerController::class, 'bulkGetBatchContent']);
@@ -90,9 +89,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/createCycle', [RegistrationCycleController::class, 'store']);
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
     Route::post('/valAge', [ValidationFormController::class, 'valAge']);
-    Route::put('/runCycle', [RegistrationCycleController::class, 'runCycle']);
     Route::delete('/deleteCycle/{id}', [RegistrationCycleController::class, 'deleteCycle']);
-    Route::put('/stopCycle', [RegistrationCycleController::class, 'stopCycle']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();

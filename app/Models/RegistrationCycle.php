@@ -12,8 +12,6 @@ class RegistrationCycle extends Model
     protected $fillable = [
         'cycleName',
         'cycleStatus',
-        'start',
-        'end',
     ];
 
     public function validatedYouths()

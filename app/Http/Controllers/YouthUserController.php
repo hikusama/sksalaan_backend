@@ -47,6 +47,7 @@ class YouthUserController extends Controller
         $cycleID = $request->input('cID');
 
         if ($typeId) {
+            $validity = strtolower($request->input('validity', 'validated'));
             $youthType = strtolower($request->input('youthType'));
             $sex = strtolower($request->input('sex'));
             $gender = strtolower($request->input('gender'));
@@ -63,7 +64,7 @@ class YouthUserController extends Controller
             }
 
             if ($cycleID !== 'all') {
-                RegistrationCycle::findOrFail($cycleID);
+                $cy = RegistrationCycle::findOrFail($cycleID);
             }
         }
 
@@ -96,7 +97,6 @@ class YouthUserController extends Controller
             ->when(!empty($gender), fn($q) => $q->where('gender', $gender))
             ->when(!empty($civilStatus), fn($q) => $q->where('civilStatus', $civilStatus))
 
-            // Qualification filtering
 
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
@@ -114,6 +114,15 @@ class YouthUserController extends Controller
                 'yUser.civicInvolvement'
             ]);
         if ($typeId) {
+            $query->when($cycleID === 'all' || $cy->cycleStatus === 'active', function ($q) use ($validity) {
+                $q->whereHas('yUser.validated', function ($qq) use($validity) {
+                    if ($validity === 'unvalidated') {
+                        $qq->whereNull('youth_user_id');
+                    }else{
+                        $qq->whereNotNull('youth_user_id');
+                    }
+                });
+            });
             $query->when(true, function ($q) use ($qualification, $ageType, $ageValue, $ageExpression) {
                 if ($qualification === 'unqualified') {
                     $q->where(function ($sub) use ($ageExpression) {

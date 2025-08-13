@@ -42,62 +42,7 @@ class RegistrationCycleController extends Controller
         }
     }
 
-    public function stopCycle(Request $request)
-    {
-        $cycleID = $request->input('cycleID');
-
-        try {
-            $cycle = RegistrationCycle::findOrFail($cycleID);
-            RegistrationCycle::where('cycleStatus', 'active')->update(['cycleStatus' => 'inactive']);
-            $cycle->end = now();
-            $cycle->save();
-            return response()->json([
-                'message' => 'Cycle Stopped Successfully...'
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Something went wrong!'
-            ], 400);
-        }
-    }
-    public function runCycle(Request $request)
-    {
-        $cycleID = $request->input('cycleID');
-        $toend = $request->input('toend');
-        try {
-            $tablesCount = RegistrationCycle::take(2)->get(['id']);
-            if (count($tablesCount) > 1 && $toend) {
-                $cycleToEnd = RegistrationCycle::findOrFail($toend);
-                $cycleToEnd->end = now();
-                $cycleToEnd->save();
-            }
-            $cycle = RegistrationCycle::findOrFail($cycleID);
-
-            RegistrationCycle::where('cycleStatus', 'active')
-                ->where('id', '!=', $cycleID)
-                ->update([
-                    'cycleStatus' => 'inactive',
-                ]);
-
-            $cycle->cycleStatus = 'active';
-            $cycle->end = null;
-            if (!$cycle->start) {
-                $cycle->start = now();
-            }
-
-            $cycle->save();
-
-            return response()->json([
-                'message' => 'Cycle started successfully.',
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Something went wrong! ID: ' . $cycleID,
-                'error' => $th->getMessage(),
-            ], 400);
-        }
-    }
-
+ 
     public function show(Request $request)
     {
 
