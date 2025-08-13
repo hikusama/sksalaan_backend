@@ -115,10 +115,10 @@ class YouthUserController extends Controller
             ]);
         if ($typeId) {
             $query->when($cycleID === 'all' || $cy->cycleStatus === 'active', function ($q) use ($validity) {
-                $q->whereHas('yUser.validated', function ($qq) use($validity) {
+                $q->whereHas('yUser.validated', function ($qq) use ($validity) {
                     if ($validity === 'unvalidated') {
                         $qq->whereNull('youth_user_id');
-                    }else{
+                    } else {
                         $qq->whereNotNull('youth_user_id');
                     }
                 });
@@ -367,7 +367,6 @@ class YouthUserController extends Controller
 
     private function validateYouthInfo(Request $request)
     {
- 
 
         $fields = $request->validate([
             'firstname' => 'required|max:60',
@@ -390,6 +389,36 @@ class YouthUserController extends Controller
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
             'noOfChildren' => 'nullable|integer|min:0|max:30',
+        ]);
+        $renamedFields = [];
+        foreach ($fields as $key => $value) {
+            if ($key === 'firstname') {
+                $renamedFields['fname'] = $value;
+            } elseif ($key === 'middlename') {
+                $renamedFields['mname'] = $value;
+            } elseif ($key === 'lastname') {
+                $renamedFields['lname'] = $value;
+            } else {
+                $renamedFields[$key] = $value;
+            }
+        }
+        return $renamedFields;
+    }
+
+
+    private function validateYouthValidate(Request $request)
+    {
+
+        $fields = $request->validate([
+            'gender' => 'nullable|max:40',
+            'address' => 'required|max:100',
+            'contactNo' => 'required|max:10|min:10',
+            'noOfChildren' => 'nullable|integer|min:0|max:30',
+            'height' => 'nullable|integer|min:0|max:300',
+            'weight' => 'nullable|integer|min:0|max:200',
+            'civilStatus' => 'required|max:100',
+            'occupation' => 'nullable|max:100',
+            'religion' => 'required|max:100',
         ]);
         $renamedFields = [];
         foreach ($fields as $key => $value) {
@@ -592,7 +621,7 @@ class YouthUserController extends Controller
     }
     public function validateYouthInfoRaw(Request $request)
     {
- 
+
         $fields = $request->validate([
             'fname' => 'required|max:60',
             'mname' => 'required|max:60',
@@ -706,6 +735,7 @@ class YouthUserController extends Controller
     public function update(Request $request, $youth)
     {
         $cycleID = $this->getCycle();
+        $type = $request->input('mfy', true);
 
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
@@ -717,7 +747,12 @@ class YouthUserController extends Controller
             'skillsf' => 'required|max:100',
         ]);
 
-        $fields2 = $this->validateYouthInfo($request);
+        if ($type) {
+            $fields2 = $this->validateYouthInfo($request);
+        } else {
+            $fields2 = $this->validateYouthValidate($request);
+        }
+
         $fields3 = $this->validateEducBG($request);
         $fields4 = $this->validateCivicInvolvement($request);
 
@@ -809,8 +844,13 @@ class YouthUserController extends Controller
                 $changed = true;
             }
         }
-
-        $msg = $changed ? 'Updated successfully...' : 'Nothing to update';
+        $fnal = '';
+        if ($type) {
+            $fnal = "Updated successfully...";
+        }else{
+            $fnal = "Validated successfully...";
+        }
+        $msg = $changed ? $fnal : 'Nothing to update';
 
         return response()->json(['message' => $msg, 'youth' => $youth]);
     }
