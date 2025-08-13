@@ -367,9 +367,7 @@ class YouthUserController extends Controller
 
     private function validateYouthInfo(Request $request)
     {
-        $request['height'] = (int)$request->input('height');
-        $request['weight'] = (int)$request->input('weight');
-        $request['age'] = (int)$request->input('age');
+ 
 
         $fields = $request->validate([
             'firstname' => 'required|max:60',
@@ -386,12 +384,12 @@ class YouthUserController extends Controller
             ],
             'placeOfBirth' => 'required|max:100',
             'contactNo' => 'required|max:10|min:10',
-            'height' => 'nullable|integer|max:300',
-            'weight' => 'nullable|integer|max:200',
+            'height' => 'nullable|integer|min:0|max:300',
+            'weight' => 'nullable|integer|min:0|max:200',
             'religion' => 'required|max:100',
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
-            'noOfChildren' => 'nullable|max:30',
+            'noOfChildren' => 'nullable|integer|min:0|max:30',
         ]);
         $renamedFields = [];
         foreach ($fields as $key => $value) {
@@ -594,10 +592,7 @@ class YouthUserController extends Controller
     }
     public function validateYouthInfoRaw(Request $request)
     {
-        $request['height'] = (int)$request->input('height');
-        $request['weight'] = (int)$request->input('weight');
-        $request['age'] = (int)$request->input('age');
-
+ 
         $fields = $request->validate([
             'fname' => 'required|max:60',
             'mname' => 'required|max:60',
@@ -614,12 +609,12 @@ class YouthUserController extends Controller
             ],
             'placeOfBirth' => 'required|max:100',
             'contactNo' => 'required|max:10|min:10',
-            'height' => 'nullable|integer|max:300',
-            'weight' => 'nullable|integer|max:200',
+            'height' => 'nullable|integer|min:0|max:300',
+            'weight' => 'nullable|integer|min:0|max:200',
             'religion' => 'required|max:100',
             'occupation' => 'nullable|max:100',
             'civilStatus' => 'required|max:100',
-            'noOfChildren' => 'nullable|max:30',
+            'noOfChildren' => 'nullable|integer|min:0|max:30',
             'created_at' => 'nullable|date|date_format:Y-m-d',
         ]);
 

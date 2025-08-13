@@ -8,8 +8,7 @@ class ValidationFormController extends Controller
 {
     public function valStep1(Request $request)
     {
-        $request['age'] = (int)$request->input('age');
-
+ 
         $request->validate([
             'firstname' => 'required|max:60',
             'middlename' => 'required|max:60',
@@ -28,18 +27,17 @@ class ValidationFormController extends Controller
     }
     public function valStep2(Request $request)
     {
-        $request['height'] = (int)$request->input('height');
-        $request['weight'] = (int)$request->input('weight');
+ 
 
         $request->validate([
             'youthType' => 'required|max:100',
             'skills' => 'required|array',
             'skills.*' => 'string|max:100',
             'placeOfBirth' => 'required|max:100',
-            'noOfChildren' => 'nullable|max:100',
+            'noOfChildren' => 'nullable|integer|min:0|max:30',
             'contactNo' => 'required|regex:/^9\d{9}$/',
-            'height' => 'nullable|integer|max:200',
-            'weight' => 'nullable|integer|max:100',
+            'height' => 'nullable|integer|min:0|max:300',
+            'weight' => 'nullable|integer|min:0|max:200',
             'civilStatus' => 'required|max:50',
             'occupation' => 'nullable|max:100',
             'religion' => 'required|max:100',
