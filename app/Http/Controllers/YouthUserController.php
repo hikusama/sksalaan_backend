@@ -47,14 +47,14 @@ class YouthUserController extends Controller
         $cycleID = $request->input('cID');
 
         if ($typeId) {
-            $validity = strtolower($request->input('validity', 'validated'));
+            $validity = strtolower($request->input('validity', 'All'));
             $youthType = strtolower($request->input('youthType'));
             $sex = strtolower($request->input('sex'));
             $gender = strtolower($request->input('gender'));
             $civilStatus = strtolower($request->input('civilStatus'));
             $ageType = $request->input('ageType');
             $ageValue = $request->input('ageValue', []);
-            $qualification = strtolower($request->input('qualification', 'qualified'));
+            $qualification = strtolower($request->input('qualification', 'All'));
 
             $driver = DB::getDriverName();
             if ($driver === 'sqlite') {
@@ -77,21 +77,14 @@ class YouthUserController extends Controller
             return $page;
         });
 
-        $query = YouthInfo::when($typeId, function ($qid) use ($cycleID) {
-            $qid->when($cycleID !== 'all', function ($qq) use ($cycleID) {
-                $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
-                    $q->where('registration_cycle_id', $cycleID);
+        $query = YouthInfo::where(function ($query) use ($search) {
+            $query->where('fname', 'LIKE', '%' . $search . '%')
+                ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                ->orWhereHas('yUser', function ($q) use ($search) {
+                    $q->where('batchNo', 'LIKE', '%' . $search . '%');
                 });
-            });
         })
-            ->where(function ($query) use ($search) {
-                $query->where('fname', 'LIKE', '%' . $search . '%')
-                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                    ->orWhere('lname', 'LIKE', '%' . $search . '%')
-                    ->orWhereHas('yUser', function ($q) use ($search) {
-                        $q->where('batchNo', 'LIKE', '%' . $search . '%');
-                    });
-            })
             ->when(!empty($youthType), fn($q) => $q->where('youthType', $youthType))
             ->when(!empty($sex), fn($q) => $q->where('sex', $sex))
             ->when(!empty($gender), fn($q) => $q->where('gender', $gender))
@@ -114,15 +107,29 @@ class YouthUserController extends Controller
                 'yUser.civicInvolvement'
             ]);
         if ($typeId) {
-            $query->when($cycleID === 'all' || $cy->cycleStatus === 'active', function ($q) use ($validity) {
-                $q->whereHas('yUser.validated', function ($qq) use ($validity) {
-                    if ($validity === 'unvalidated') {
-                        $qq->whereNull('youth_user_id');
-                    } else {
-                        $qq->whereNotNull('youth_user_id');
-                    }
+            if ($cycleID !== 'all' && ($cy && $cy->cycleStatus !== 'active')) {
+
+                $query->when($cycleID !== 'all', function ($qq) use ($cycleID) {
+                    $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                        $q->where('registration_cycle_id', $cycleID);
+                    });
                 });
-            });
+            } else {
+                if ($validity === 'validated') {
+                    $query->when($cycleID === 'all' || ($cy && $cy->cycleStatus === 'active'), function ($q) {
+                        $q->whereHas('yUser.validated', function ($qq) {
+                            $qq->whereNotNull('youth_user_id');
+                        });
+                    });
+                } elseif ($validity === 'unvalidated') {
+                    $query->where(function ($sub) {
+                        $sub->whereDoesntHave('yUser.validated')
+                            ->orWhereHas('yUser.validated', function ($qq) {
+                                $qq->whereNull('youth_user_id');
+                            });
+                    });
+                }
+            }
             $query->when(true, function ($q) use ($qualification, $ageType, $ageValue, $ageExpression) {
                 if ($qualification === 'unqualified') {
                     $q->where(function ($sub) use ($ageExpression) {
@@ -144,21 +151,29 @@ class YouthUserController extends Controller
                 }
             });
         }
-
+        $query->addSelect([
+            'is_validated' => DB::table('validated_youths')
+                ->selectRaw('COUNT(*) > 0')
+                ->whereColumn('validated_youths.youth_user_id', 'youth_infos.youth_user_id')
+                ->when($cycleID !== 'all', function ($q) use ($cycleID) {
+                    $q->where('validated_youths.registration_cycle_id', $cycleID);
+                })
+        ]);
         // Handle sorting by age without selecting it
         if ($sortBy === 'age') {
-            $query->orderByRaw("$ageExpression DESC");
+            $query->orderByRaw("$ageExpression ASC");
         } else {
-            $query->orderBy($sortBy, 'DESC');
+            $query->orderBy($sortBy, 'ASC');
         }
 
         $results = $query->paginate($perPage)->appends($request->all());
 
         $pass = $results->map(function ($info) {
+            $arr = $info->toArray();
+
+            $arr['is_validated'] = (bool) $info->is_validated;
             return [
-                'youthUser' => [
-                    $info
-                ]
+                'youthUser' => [$arr] // keep your original shape (array with one object)
             ];
         });
 
@@ -844,15 +859,15 @@ class YouthUserController extends Controller
                 $changed = true;
             }
         }
-        $fnal = '';
-        if ($type) {
-            $fnal = "Updated successfully...";
-        }else{
-            $fnal = "Validated successfully...";
-        }
-        $msg = $changed ? $fnal : 'Nothing to update';
 
-        return response()->json(['message' => $msg, 'youth' => $youth]);
+        $msg = $changed ? 'Updated successfully...' : 'Nothing to update';
+        if (!$type) {
+            ValidateYouth::create([
+                'youth_user_id' => $youth->id,
+                'registration_cycle_id' => $cycleID,
+            ]);
+        }
+        return response()->json(['message' => $type ? $msg : 'Validated successfully...']);
     }
 
 
