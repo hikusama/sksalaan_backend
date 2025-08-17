@@ -6,6 +6,7 @@ use App\Http\Controllers\ComposedAnnouncementController;
 use App\Http\Controllers\JobPlacementController;
 use App\Http\Controllers\RegistrationCycleController;
 use App\Http\Controllers\Supabase;
+use App\Http\Controllers\SyncHubController;
 use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthDataExportController;
@@ -60,6 +61,8 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/valStep1Post', [ComposedAnnouncementController::class, 'valStep1Post']);
     Route::post('/valStep2Post', [ComposedAnnouncementController::class, 'valStep2Post']);
     Route::post('/compose', [ComposedAnnouncementController::class, 'compose']);
+    Route::post('/createHub', [SyncHubController::class, 'createHub']);
+    Route::get('/getHubs', [SyncHubController::class, 'getHubs']);
     Route::get('/dropDownCycle', [ComposedAnnouncementController::class, 'getAllCycle']);
     Route::get('/getSMSPending', [ComposedAnnouncementController::class, 'getSMSPending']);
     Route::get('/getSMSDelivered', [ComposedAnnouncementController::class, 'getSMSDelivered']);

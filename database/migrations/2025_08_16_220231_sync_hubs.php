@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sync_hub', function (Blueprint $table) {
+        Schema::create('sync_hubs', function (Blueprint $table) {
             $table->id();
             $table->string('status')->default('closed');
             $table->string('addresses');
@@ -25,6 +25,6 @@ return new class extends Migration
     public function down(): void
     {
         //
-        Schema::dropIfExists('sync_hub');
+        Schema::dropIfExists('sync_hubs');
     }
 };
