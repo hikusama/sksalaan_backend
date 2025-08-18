@@ -23,10 +23,10 @@ class SyncHubController extends Controller
         $res = SyncHub::all();
         if (count($res) >= 10) {
             return response()->json([
-                'error' => [
+                'errors' => [
                     'size' => 'Max hubs reached please delete hubs to enable create'
                 ]
-            ]);
+            ],422);
         }
 
 
