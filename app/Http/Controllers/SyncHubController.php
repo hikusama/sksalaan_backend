@@ -30,8 +30,6 @@ class SyncHubController extends Controller
         }
 
 
-
-
         $selectedString = collect($fields['addresses'])
             ->filter(fn($v) => $v === true)
             ->keys()
@@ -54,6 +52,49 @@ class SyncHubController extends Controller
         $res = SyncHub::all();
         return response()->json([
             'data' => $res
+        ]);
+    }
+
+    public function openHub(Request $req)
+    {
+        $res = SyncHub::findOrFail($req->input('id'));
+
+        SyncHub::where('status', 'opened')->update(['status' => 'closed']);
+        $xp = now()->addMinute();
+        $res->update([
+            'status' => 'opened',
+            'expires_at' => $xp,
+        ]);
+        $res->save();
+
+        return response()->json([
+            'msg' => 'Success...',
+            'action' => 'open',
+            'time' => $xp
+        ]);
+    }
+
+    public function closeHub(Request $req)
+    {
+        SyncHub::findOrFail($req->input('id'));
+
+        SyncHub::where('status', 'opened')->update(['status' => 'closed']);
+
+        return response()->json([
+            'msg' => 'Success...',
+            'action' => 'close'
+        ]);
+    }
+
+    public function deleteHub($id)
+    {
+        SyncHub::findOrFail($id);
+
+        SyncHub::destroy($id);
+
+        return response()->json([
+            'msg' => 'Success...',
+            'action' => 'destroy'
         ]);
     }
 }

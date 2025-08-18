@@ -12,6 +12,7 @@ class SyncHub extends Model
  
     protected $fillable = [
         'status',
+        'expires_at',
         'addresses',
     ];
 }

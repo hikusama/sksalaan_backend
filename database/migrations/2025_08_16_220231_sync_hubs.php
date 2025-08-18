@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('status')->default('closed');
             $table->string('addresses');
+            $table->string('expires_at')->nullable();
             $table->timestamps();
         });
     }
