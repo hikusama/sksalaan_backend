@@ -79,6 +79,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
     Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
+    Route::post('/payYouth', [JobPlacementController::class, 'payYouth']);
     Route::post('/getInfoData', [YouthInfoController::class, 'getInfoData']);
     Route::delete('/deleteJobRecord/{jobPlacement}', [JobPlacementController::class, 'deleteJobRecord']);
     Route::post('/bulkGetUser', [BulkLoggerController::class, 'bulkGetUser']);

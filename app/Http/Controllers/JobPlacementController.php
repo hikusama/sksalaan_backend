@@ -17,11 +17,12 @@ class JobPlacementController extends Controller
 
     public function searchJobPlacedYouth(Request $request)
     {
-        $cycleID = $this->getCycle();
+        $cycleID = $request->input('cID');
 
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
         }
+
         $search = $request->input('q');
         $perPage = $request->input('perPage', 15);
         $page = $request->input('page', 1);
@@ -39,11 +40,13 @@ class JobPlacementController extends Controller
         $results = DB::table('youth_users')
             ->rightJoin('job_supports', 'youth_users.id', '=', 'job_supports.youth_user_id')
             ->join('youth_infos', 'youth_infos.youth_user_id', '=', 'youth_users.id')
-            ->where('youth_users.registration_cycle_id', $cycleID)
             ->where(function ($query) use ($search) {
                 $query->where('youth_infos.fname', 'LIKE', '%' . $search . '%')
                     ->orWhere('youth_infos.mname', 'LIKE', '%' . $search . '%')
                     ->orWhere('youth_infos.lname', 'LIKE', '%' . $search . '%');
+            })->when($cycleID !== 'all', function ($qq) use ($cycleID) {
+                $qq->join('validated_youths', 'validated_youths.youth_user_id', '=', 'youth_users.id')
+                    ->where('validated_youths.registration_cycle_id', $cycleID);
             })
             ->groupBy('job_supports.id')
             ->orderBy("youth_infos.$sortBy", 'DESC')
@@ -51,8 +54,8 @@ class JobPlacementController extends Controller
                 'youth_infos.youth_user_id',
                 'youth_infos.fname',
                 'youth_infos.mname',
+                'youth_infos.dateOfBirth',
                 'youth_infos.lname',
-                'youth_infos.age',
                 'youth_infos.address',
                 'job_supports.created_at',
 
@@ -117,7 +120,7 @@ class JobPlacementController extends Controller
     }
     public function youthLightData(Request $request)
     {
-        $cycleID = $this->getCycle();
+        $cycleID = $request->input('cID');
 
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
@@ -133,10 +136,13 @@ class JobPlacementController extends Controller
         });
 
         $results = YouthInfo::whereHas('yUser', function ($q) use ($cycleID, $search) {
-            $q->where('registration_cycle_id', $cycleID)
-                ->when($search, function ($q) use ($search) {
-                    $q->where('skills', 'LIKE', '%' . $search . '%');
-                });;
+            $q->when($search, function ($q) use ($search) {
+                $q->where('skills', 'LIKE', '%' . $search . '%');
+            });
+        })->when($cycleID !== 'all', function ($qq) use ($cycleID) {
+            $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                $q->where('registration_cycle_id', $cycleID);
+            });
         })
             ->with('yUser')
             ->addSelect([

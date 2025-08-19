@@ -111,7 +111,7 @@ class SyncHubController extends Controller
         }
         if (now()->greaterThan($hub->expires_at)) {
             return response()->json([
-                'msg' => 'Hub is closed.',
+                'msg' => 'Hub is expired.',
             ], 422);
         }
         $driver = DB::getDriverName();
