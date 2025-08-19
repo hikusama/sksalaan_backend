@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\SyncHub;
+use App\Models\YouthInfo;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SyncHubController extends Controller
 {
@@ -20,14 +23,17 @@ class SyncHubController extends Controller
             ]
         ]);
 
+
+
         $res = SyncHub::all();
         if (count($res) >= 10) {
             return response()->json([
                 'errors' => [
                     'size' => 'Max hubs reached please delete hubs to enable create'
                 ]
-            ],422);
+            ], 422);
         }
+
 
 
         $selectedString = collect($fields['addresses'])
@@ -49,9 +55,17 @@ class SyncHubController extends Controller
 
     public function getHubs()
     {
+        $openhub = SyncHub::where('status', 'opened')->first();
+        if ($openhub && now()->greaterThan($openhub->expires_at)) {
+            $openhub->status = 'closed';
+            $openhub->expires_at = null;
+            $openhub->save();
+        }
         $res = SyncHub::all();
+
         return response()->json([
-            'data' => $res
+            'data' => $res,
+            'expires_at' => $openhub ? $openhub->expires_at : ''
         ]);
     }
 
@@ -60,7 +74,7 @@ class SyncHubController extends Controller
         $res = SyncHub::findOrFail($req->input('id'));
 
         SyncHub::where('status', 'opened')->update(['status' => 'closed']);
-        $xp = now()->addMinute();
+        $xp = now()->addMinutes(2);
         $res->update([
             'status' => 'opened',
             'expires_at' => $xp,
@@ -78,11 +92,63 @@ class SyncHubController extends Controller
     {
         SyncHub::findOrFail($req->input('id'));
 
-        SyncHub::where('status', 'opened')->update(['status' => 'closed']);
+        SyncHub::where('status', 'opened')->update(['status' => 'closed', 'expires_at' => null]);
 
         return response()->json([
             'msg' => 'Success...',
             'action' => 'close'
+        ]);
+    }
+
+    public function getDataFromHub(Request $req)
+    {
+        $hub = SyncHub::findOrFail($req->input('id'));
+
+        if ($hub->status === 'closed') {
+            return response()->json([
+                'msg' => 'Hub is closed.',
+            ], 422);
+        }
+        if (now()->greaterThan($hub->expires_at)) {
+            return response()->json([
+                'msg' => 'Hub is closed.',
+            ], 422);
+        }
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
+        } else {
+            $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
+        }
+
+        $addresses = array_map('trim', explode(",", $hub->addresses));
+
+        $query = YouthInfo::whereHas('yUser.validated', function ($qq) {
+            $qq->whereNotNull('youth_user_id');
+        })
+            ->whereBetween(DB::raw($ageExpression), [15, 30])
+            ->whereIn('address', $addresses)
+            ->with([
+                'yUser',
+                'yUser.educbg',
+                'yUser.civicInvolvement'
+            ])->get();
+
+
+        return response()->json([
+            'hub' => $hub,
+            'addr' => $addresses,
+            'query' => $query,
+            'msg' => 'success',
+        ]);
+    }
+
+    public function pickHub()
+    {
+        $hubs = SyncHub::where('status', 'opened')->get();
+
+        return response()->json([
+            'hubs' => $hubs,
         ]);
     }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulkLoggerController;
 use App\Http\Controllers\ComposedAnnouncementController;
+use App\Http\Controllers\SyncHubController;
 use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
 use App\Http\Controllers\YouthUserController;
@@ -12,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
- 
+
 
 Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request) {
     $token = $request->user()->currentAccessToken();
@@ -60,6 +61,8 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     ];
 });
 
+Route::get('/pickHub', [SyncHubController::class, 'pickHub']);
+Route::get('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
 
 
 Route::middleware(CheckCycleOpen::class)->group(function () {
