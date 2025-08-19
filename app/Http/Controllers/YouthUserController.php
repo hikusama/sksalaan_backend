@@ -45,6 +45,7 @@ class YouthUserController extends Controller
         $sortBy = $request->input('sortBy', 'fname');
         $typeId = $request->input('typeId');
         $cycleID = $request->input('cID');
+        $cid = $this->getCycle();
 
         if ($typeId) {
             $validity = strtolower($request->input('validity', 'All'));
@@ -107,7 +108,7 @@ class YouthUserController extends Controller
                 'yUser.civicInvolvement'
             ]);
         if ($typeId) {
-            if ($cycleID !== 'all' && ($cy && $cy->cycleStatus !== 'active')) {
+            if ($validity === 'all') {
 
                 $query->when($cycleID !== 'all', function ($qq) use ($cycleID) {
                     $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
@@ -116,17 +117,14 @@ class YouthUserController extends Controller
                 });
             } else {
                 if ($validity === 'validated') {
-                    $query->when($cycleID === 'all' || ($cy && $cy->cycleStatus === 'active'), function ($q) {
-                        $q->whereHas('yUser.validated', function ($qq) {
-                            $qq->whereNotNull('youth_user_id');
+                    $query->where(function ($sub) use ($cid) {
+                        $sub->whereHas('yUser.validated', function ($qq) use ($cid) {
+                            $qq->where('registration_cycle_id', $cid);
                         });
                     });
                 } elseif ($validity === 'unvalidated') {
-                    $query->where(function ($sub) {
-                        $sub->whereDoesntHave('yUser.validated')
-                            ->orWhereHas('yUser.validated', function ($qq) {
-                                $qq->whereNull('youth_user_id');
-                            });
+                    $query->whereDoesntHave('yUser.validated', function ($qq) use ($cid) {
+                        $qq->where('registration_cycle_id', $cid);
                     });
                 }
             }
@@ -155,9 +153,7 @@ class YouthUserController extends Controller
             'is_validated' => DB::table('validated_youths')
                 ->selectRaw('COUNT(*) > 0')
                 ->whereColumn('validated_youths.youth_user_id', 'youth_infos.youth_user_id')
-                ->when($cycleID !== 'all', function ($q) use ($cycleID) {
-                    $q->where('validated_youths.registration_cycle_id', $cycleID);
-                })
+                ->where('validated_youths.registration_cycle_id', $cid)
         ]);
         // Handle sorting by age without selecting it
         if ($sortBy === 'age') {
