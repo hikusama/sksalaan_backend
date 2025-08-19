@@ -15,7 +15,7 @@ class BulkLoggerController extends Controller
     public function bulkGetBatchContent(Request $request)
     {
         //
-        $cycleID = $this->getCycle();
+        $cycleID = $request->input('cID', 'all');
 
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
@@ -27,10 +27,12 @@ class BulkLoggerController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = Bulk_logger::whereHas('yUser', function ($q) use ($cycleID) {
-            $q->where('registration_cycle_id', $cycleID);
-        })
-            ->where('user_id', $user_id)->groupBy('batchNo')->paginate(10);
+
+        $results = Bulk_logger::when($cycleID != 'all', function ($q) use ($cycleID) {
+            $q->whereHas('user.youthUser.validated', function ($qq) use ($cycleID) {
+                $qq->where('registration_cycle_id', $cycleID);
+            });
+        })->where('user_id', $user_id)->groupBy('batchNo')->paginate(10);
         return response()->json([
             'data' => $results->items(),
             'pagination' => [
@@ -63,7 +65,7 @@ class BulkLoggerController extends Controller
 
     public function bulkDelete(Request $request, $batchNo)
     {
- 
+
         $bulkData = Bulk_logger::where('batchNo', $batchNo)->firstOrFail();
         Bulk_logger::destroy($bulkData->id);
         return response()->json([
