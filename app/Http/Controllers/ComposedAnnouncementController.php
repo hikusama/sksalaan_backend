@@ -62,7 +62,7 @@ class ComposedAnnouncementController extends Controller
             ]
         ]);
 
-        $cycle = RegistrationCycle::where('cycleName',$fields['cycleName'])->first();
+        $cycle = RegistrationCycle::where('cycleName', $fields['cycleName'])->first();
 
         $selectedString = collect($fields['addresses'])
             ->filter(fn($v) => $v === true)
@@ -129,6 +129,21 @@ class ComposedAnnouncementController extends Controller
             return $page;
         });
         $results = ComposedAnnouncement::where('smsStatus', 'pending')->paginate(10);
+        return response()->json([
+            'data' => $results->items(),
+            'pagination' => [
+                'current_page' => $results->currentPage(),
+                'last_pages' => $results->lastPage(),
+            ]
+        ]);
+    }
+    public function getSMSComposed(Request $request)
+    {
+        $page = $request->input('page', 1);
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+        $results = ComposedAnnouncement::paginate(10);
         return response()->json([
             'data' => $results->items(),
             'pagination' => [

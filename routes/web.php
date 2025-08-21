@@ -68,6 +68,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::delete('/deleteHub/{id}', [SyncHubController::class, 'deleteHub']);
     Route::get('/dropDownCycle', [ComposedAnnouncementController::class, 'getAllCycle']);
     Route::get('/getSMSPending', [ComposedAnnouncementController::class, 'getSMSPending']);
+    Route::get('/getSMSComposed', [ComposedAnnouncementController::class, 'getSMSComposed']);
     Route::get('/getSMSDelivered', [ComposedAnnouncementController::class, 'getSMSDelivered']);
     Route::get('/getWebPending', [ComposedAnnouncementController::class, 'getWebPending']);
     Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'getWebDelivered']);

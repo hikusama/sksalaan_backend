@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RegistrationCycle;
 use App\Models\SyncHub;
 use App\Models\YouthInfo;
 use Illuminate\Auth\Events\Registered;
@@ -103,6 +104,7 @@ class SyncHubController extends Controller
     public function getDataFromHub(Request $req)
     {
         $hub = SyncHub::findOrFail($req->input('id'));
+        $cycleID = $this->getCycle();
 
         if ($hub->status === 'closed') {
             return response()->json([
@@ -123,9 +125,11 @@ class SyncHubController extends Controller
 
         $addresses = array_map('trim', explode(",", $hub->addresses));
 
-        $query = YouthInfo::whereHas('yUser.validated', function ($qq) {
-            $qq->whereNotNull('youth_user_id');
-        })
+        $query = YouthInfo::whereDoesntHave('yUser.validated', function ($qq) use ($cycleID) {
+            $qq->where('registration_cycle_id', $cycleID);
+        })->whereHas('yUser', function ($q) {
+                $q->whereNotNull('user_id');
+            })
             ->whereBetween(DB::raw($ageExpression), [15, 30])
             ->whereIn('address', $addresses)
             ->with([
@@ -162,5 +166,11 @@ class SyncHubController extends Controller
             'msg' => 'Success...',
             'action' => 'destroy'
         ]);
+    }
+
+    public function getCycle()
+    {
+        $res = RegistrationCycle::where('cycleStatus', 'active')->first();
+        return $res->id ?? 0;
     }
 }
