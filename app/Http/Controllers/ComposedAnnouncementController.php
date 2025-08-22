@@ -6,6 +6,7 @@ use App\Models\ComposedAnnouncement;
 use App\Models\RegistrationCycle;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Validator;
 
 class ComposedAnnouncementController extends Controller
 {
@@ -137,7 +138,7 @@ class ComposedAnnouncementController extends Controller
             ]
         ]);
     }
-    public function getSMSComposed(Request $request)
+    public function getComposedAnnouncement(Request $request)
     {
         $page = $request->input('page', 1);
         Paginator::currentPageResolver(function () use ($page) {
@@ -183,5 +184,23 @@ class ComposedAnnouncementController extends Controller
                 'last_pages' => $results->lastPage(),
             ]
         ]);
+    }
+
+    public function delSms($id)
+    {
+        $validator = Validator::make(
+            ['id' => $id],
+            ['id' => 'required|exists:composed_announcements,id'],
+        );
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        ComposedAnnouncement::destroy($validator->valid());
+
+        return response()->json([
+            'msg' => 'Success..',
+         ]);
     }
 }
