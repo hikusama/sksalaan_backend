@@ -35,7 +35,7 @@ class ValidationFormController extends Controller
             'skills.*' => 'string|max:100',
             'placeOfBirth' => 'required|max:100',
             'noOfChildren' => 'nullable|integer|min:0|max:30',
-            'contactNo' => 'required|regex:/^9\d{9}$/',
+            'contactNo' => 'required|regex:/^09\d{9}$/',
             'height' => 'nullable|integer|min:0|max:300',
             'weight' => 'nullable|integer|min:0|max:200',
             'civilStatus' => 'required|max:50',

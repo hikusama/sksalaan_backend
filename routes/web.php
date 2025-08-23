@@ -71,6 +71,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::get('/getComposedAnnouncement', [ComposedAnnouncementController::class, 'getComposedAnnouncement']);
     Route::get('/getSMSDelivered', [ComposedAnnouncementController::class, 'getSMSDelivered']);
     Route::delete('/delSms/{id}', [ComposedAnnouncementController::class, 'delSms']);
+    Route::get('/sendSms/{id}', [ComposedAnnouncementController::class, 'sendSMS']);
     Route::get('/getWebPending', [ComposedAnnouncementController::class, 'getWebPending']);
     Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'getWebDelivered']);
 

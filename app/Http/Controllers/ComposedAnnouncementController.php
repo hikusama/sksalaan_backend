@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\ComposedAnnouncement;
 use App\Models\RegistrationCycle;
+use App\Models\YouthInfo;
+use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Validator;
@@ -15,7 +17,7 @@ class ComposedAnnouncementController extends Controller
     public function valStep1Post(Request $request)
     {
         $fields = $request->validate([
-            'cycleName' => 'required|exists:registration_cycles,cycleName',
+            'registration_cycle_id' => 'required|exists:registration_cycles,id',
             'addresses' => [
                 function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
@@ -53,7 +55,7 @@ class ComposedAnnouncementController extends Controller
             'where' => 'required|max:60',
             'what' => 'required|max:60',
             'description' => 'required|max:120',
-            'cycleName' => 'required|exists:registration_cycles,cycleName',
+            'registration_cycle_id' => 'required|exists:registration_cycles,id',
             'addresses' => [
                 function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
@@ -63,7 +65,6 @@ class ComposedAnnouncementController extends Controller
             ]
         ]);
 
-        $cycle = RegistrationCycle::where('cycleName', $fields['cycleName'])->first();
 
         $selectedString = collect($fields['addresses'])
             ->filter(fn($v) => $v === true)
@@ -201,6 +202,42 @@ class ComposedAnnouncementController extends Controller
 
         return response()->json([
             'msg' => 'Success..',
-         ]);
+        ]);
+    }
+
+
+    public function sendSMS($id)
+    {
+
+        $validator = Validator::make(
+            ['id' => $id],
+            ['id' => 'required|exists:composed_announcements,id'],
+        );
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        $composedAn = ComposedAnnouncement::where('id', $id)->first();
+
+        $addresses = array_map('trim', explode(',', $composedAn->addresses));
+
+        $numbers = YouthInfo::whereIn('address', $addresses)
+            ->whereHas('yUser.validated', function ($q) use ($id) {
+                $q->where('registration_cycle_id', $id);
+            })
+            ->pluck('contactNo')->toArray();
+
+        $date = new DateTime($composedAn->when);
+        $date = $date->format("M, d Y g:ia");
+        $body = "ANNOUNCEMENT!! \nWHAT: $composedAn->what \nWHEN: $date\nWHERE: $composedAn->where \n\nNOTE: $composedAn->description \n\n\nThankyou\nBy: SK Chairman of salaan";
+        $composedAn->update([
+            'smsStatus' => 'delivered'
+        ]);
+        return response()->json([
+            'msg' => 'Success..',
+            'numbers' => $numbers,
+            'body' => $body,
+        ]);
     }
 }

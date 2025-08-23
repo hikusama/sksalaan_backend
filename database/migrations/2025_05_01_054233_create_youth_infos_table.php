@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('address');
             $table->timestamp('dateOfBirth');
             $table->string('placeOfBirth');
-            $table->integer('contactNo');
+            $table->string('contactNo');
             $table->integer('height')->nullable();
             $table->integer('weight')->nullable();
             $table->string('religion');
