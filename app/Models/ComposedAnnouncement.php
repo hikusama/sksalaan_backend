@@ -15,6 +15,7 @@ class ComposedAnnouncement extends Model
         'smsStatus',
         'when',
         'where',
+        'who',
         'what',
         'registration_cycle_id',
         'addresses',
