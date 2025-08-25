@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('webStatus')->default('pending');
             $table->dateTime('when');
             $table->string('where');
+            $table->string('who');
             $table->string('what');
             $table->string('addresses');
             $table->foreignId('registration_cycle_id')->nullable()->constrained()->cascadeOnDelete();
