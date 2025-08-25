@@ -72,13 +72,13 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::get('/getSMSDelivered', [ComposedAnnouncementController::class, 'getSMSDelivered']);
     Route::delete('/delSms/{id}', [ComposedAnnouncementController::class, 'delSms']);
     Route::get('/sendSms/{id}', [ComposedAnnouncementController::class, 'sendSMS']);
+    Route::get('/post/{id}', [ComposedAnnouncementController::class, 'post']);
     Route::get('/getWebPending', [ComposedAnnouncementController::class, 'getWebPending']);
     Route::get('/getWebDelivered', [ComposedAnnouncementController::class, 'getWebDelivered']);
 
     Route::apiResource('/youth', YouthUserController::class);
     Route::put('/youthApprove', [YouthUserController::class, 'youthApprove']);
     Route::post('/search', [YouthUserController::class, 'searchName']);
-    Route::apiResource('/supah', Supabase::class);
     Route::post('/youthLight', [JobPlacementController::class, 'youthLightData']);
     Route::post('/youthOnJobRecord', [JobPlacementController::class, 'searchJobPlacedYouth']);
     Route::post('/recruitYouth', [JobPlacementController::class, 'recruitYouth']);
