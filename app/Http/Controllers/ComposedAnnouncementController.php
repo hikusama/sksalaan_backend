@@ -14,6 +14,13 @@ class ComposedAnnouncementController extends Controller
 {
     //
 
+    protected $supabase;
+
+    public function __construct(SupabaseClient $supabase)
+    {
+        $this->supabase = $supabase;
+    }
+
     public function valStep1Post(Request $request)
     {
         $fields = $request->validate([
@@ -54,7 +61,8 @@ class ComposedAnnouncementController extends Controller
             'when' => 'required|date_format:Y-m-d\TH:i|after_or_equal:' . now()->format('Y-m-d\TH:i'),
             'where' => 'required|max:60',
             'what' => 'required|max:60',
-            'description' => 'required|max:120',
+            'who' => 'required|max:60',
+            'description' => 'required|max:100',
             'registration_cycle_id' => 'required|exists:registration_cycles,id',
             'addresses' => [
                 function ($attr, $val, $fail) {
@@ -113,7 +121,7 @@ class ComposedAnnouncementController extends Controller
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = ComposedAnnouncement::where('webStatus', 'delivered')->paginate(10);
+        $results = ComposedAnnouncement::where('webStatus', 'posted')->paginate(10);
         return response()->json([
             'data' => $results->items(),
             'pagination' => [
@@ -121,6 +129,37 @@ class ComposedAnnouncementController extends Controller
                 'last_pages' => $results->lastPage(),
             ]
         ]);
+    }
+    public function post($id)
+    {
+        $validator = Validator::make(
+            ['id' => $id],
+            ['id' => 'required|exists:composed_announcements,id'],
+        );
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        $data = ComposedAnnouncement::find($id);
+        $res = $this->supabase->create($data);
+        $status = 200;
+        $msg = 'Success...';
+        if ($res === 2) {
+            $status = 500;
+            $msg = 'Supabase not reachable';
+        } else if ($res === 3) {
+            $status = 500;
+            $msg = 'Something went wrong';
+        }
+        if ($status === 200) {
+            $data->update([
+                'webStatus' => 'posted'
+            ]);
+        }
+        return response()->json([
+            'msg' => $msg
+        ], $status);
     }
 
 
@@ -230,7 +269,7 @@ class ComposedAnnouncementController extends Controller
 
         $date = new DateTime($composedAn->when);
         $date = $date->format("M, d Y g:ia");
-        $body = "ANNOUNCEMENT!! \nWHAT: $composedAn->what \nWHEN: $date\nWHERE: $composedAn->where \n\nNOTE: $composedAn->description \n\n\nThankyou\nBy: SK Chairman of salaan";
+        $body = "ANNOUNCEMENT!! \nWHAT: $composedAn->what \nWHEN: $date\nWHERE: $composedAn->where\nWHO: $composedAn->who Addresses includes: $composedAn->addresses \n\nNOTE: $composedAn->description \n\n\nThankyou\nBy: SK Chairman of salaan";
         $composedAn->update([
             'smsStatus' => 'delivered'
         ]);
