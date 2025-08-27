@@ -6,6 +6,7 @@ use App\Http\Controllers\ComposedAnnouncementController;
 use App\Http\Controllers\SyncHubController;
 use App\Http\Controllers\ValidationFormController;
 use App\Http\Controllers\XportExcel;
+use App\Http\Controllers\YouthInfoController;
 use App\Http\Controllers\YouthUserController;
 use App\Http\Middleware\CheckCycleOpen;
 use App\Models\RegistrationCycle;
@@ -60,6 +61,7 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
         'cycle' => $activeCycle,
     ];
 });
+Route::post('/getMapData', [YouthInfoController::class, 'getMapData']);
 
 Route::get('/pickHub', [SyncHubController::class, 'pickHub']);
 Route::get('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
