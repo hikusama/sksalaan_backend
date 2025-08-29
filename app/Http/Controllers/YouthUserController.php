@@ -382,7 +382,20 @@ class YouthUserController extends Controller
         $fields = $request->validate([
             'firstname' => 'required|max:60',
             'middlename' => 'required|max:60',
-            'lastname' => 'required|max:60',
+            'lastname' => [
+                'required',
+                'max:60',
+                function ($attribute, $value, $fail) use ($request) {
+                    $exists = YouthInfo::whereRaw(
+                        'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
+                        [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
+                    )->exists();
+
+                    if ($exists) {
+                        $fail('A youth with the same full name already exists.');
+                    }
+                },
+            ],
             'sex' => 'required|in:Male,Female',
             'gender' => 'nullable|max:40',
             'address' => 'required|max:100',
@@ -632,11 +645,23 @@ class YouthUserController extends Controller
     }
     public function validateYouthInfoRaw(Request $request)
     {
-
         $fields = $request->validate([
             'fname' => 'required|max:60',
             'mname' => 'required|max:60',
-            'lname' => 'required|max:60',
+            'lname' => [
+                'required',
+                'max:60',
+                function ($attribute, $value, $fail) use ($request) {
+                    $exists = YouthInfo::whereRaw(
+                        'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
+                        [strtolower($request->fname), strtolower($request->mname), strtolower($request->lname)]
+                    )->exists();
+
+                    if ($exists) {
+                        $fail('A youth with the same full name already exists.');
+                    }
+                },
+            ],
             'sex' => 'required|in:Male,Female',
             'gender' => 'nullable|max:40',
             'address' => 'required|max:100',
@@ -660,6 +685,7 @@ class YouthUserController extends Controller
 
         return $fields;
     }
+
 
     private function validateEducBGRaw(Request $request)
     {
