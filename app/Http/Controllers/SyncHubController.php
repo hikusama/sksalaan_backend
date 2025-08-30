@@ -75,7 +75,7 @@ class SyncHubController extends Controller
         $res = SyncHub::findOrFail($req->input('id'));
 
         SyncHub::where('status', 'opened')->update(['status' => 'closed']);
-        $xp = now()->addMinutes(2);
+        $xp = now()->addMinutes(15);
         $res->update([
             'status' => 'opened',
             'expires_at' => $xp,
@@ -101,19 +101,19 @@ class SyncHubController extends Controller
         ]);
     }
 
-    public function getDataFromHub(Request $req)
+    public function getDataFromHub()
     {
-        $hub = SyncHub::findOrFail($req->input('id'));
+        $hub = SyncHub::where('status','opened')->first();
         $cycleID = $this->getCycle();
 
-        if ($hub->status === 'closed') {
+        // if ($hub->status === 'closed') {
+        //     return response()->json([
+        //         'msg' => 'Hub is closed.',
+        //     ], 422);
+        // }
+        if (now()->greaterThan($hub->expires_at) || !$hub) {
             return response()->json([
                 'msg' => 'Hub is closed.',
-            ], 422);
-        }
-        if (now()->greaterThan($hub->expires_at)) {
-            return response()->json([
-                'msg' => 'Hub is expired.',
             ], 422);
         }
         $driver = DB::getDriverName();
