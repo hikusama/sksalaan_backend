@@ -2,17 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\YouthInfo;
 use Illuminate\Http\Request;
 
 class ValidationFormController extends Controller
 {
     public function valStep1(Request $request)
     {
- 
+
         $request->validate([
             'firstname' => 'required|max:60',
             'middlename' => 'required|max:60',
-            'lastname' => 'required|max:60',
+            'lastname' => [
+                'required',
+                'max:60',
+                function ($attribute, $value, $fail) use ($request) {
+                    $exists = YouthInfo::whereRaw(
+                        'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
+                        [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
+                    )->exists();
+
+                    if ($exists) {
+                        $fail('A youth with the same full name already exists.');
+                    }
+                },
+            ],
             'sex' => 'required|in:Male,Female',
             'gender' => 'nullable|max:40',
             'dateOfBirth' => [
@@ -27,7 +41,7 @@ class ValidationFormController extends Controller
     }
     public function valStep2(Request $request)
     {
- 
+
 
         $request->validate([
             'youthType' => 'required|max:100',
@@ -172,7 +186,7 @@ class ValidationFormController extends Controller
         if ($type === "range") {
             $request->validate([
                 'min' => 'required|integer|min:15|max:29',
-                'max' => 'required|integer|min:' . $request->get('min')+1 . '|max:30',
+                'max' => 'required|integer|min:' . $request->get('min') + 1 . '|max:30',
             ]);
         } else {
             $request->validate([
@@ -181,7 +195,7 @@ class ValidationFormController extends Controller
         }
 
         return response()->json([
-            'message'=>"success"
+            'message' => "success"
         ]);
     }
 }
