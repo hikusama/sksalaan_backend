@@ -16,6 +16,7 @@ class SyncHubController extends Controller
     {
         $fields = $request->validate([
             'addresses' => [
+                'required',
                 function ($attr, $val, $fail) {
                     if (!collect($val)->flatten()->contains(true)) {
                         $fail($attr . ' must be chosen at least one.');
@@ -74,7 +75,7 @@ class SyncHubController extends Controller
     {
         $res = SyncHub::findOrFail($req->input('id'));
 
-        SyncHub::where('status', 'opened')->update(['status' => 'closed']);
+        SyncHub::where('status', 'opened')->update(['status' => 'closed', 'expires_at' => null]);
         $xp = now()->addMinutes(15);
         $res->update([
             'status' => 'opened',
@@ -101,21 +102,46 @@ class SyncHubController extends Controller
         ]);
     }
 
-    public function getDataFromHub()
+    public function getDataFromHub(Request $req)
     {
-        $hub = SyncHub::where('status','opened')->first();
-        $cycleID = $this->getCycle();
 
-        // if ($hub->status === 'closed') {
-        //     return response()->json([
-        //         'msg' => 'Hub is closed.',
-        //     ], 422);
-        // }
-        if (now()->greaterThan($hub->expires_at) || !$hub) {
+        $hub = SyncHub::where('status', 'opened')->first();
+
+        if (!$hub && now()->greaterThan($hub->expires_at)) {
             return response()->json([
                 'msg' => 'Hub is closed.',
             ], 422);
         }
+
+        $fieldAddrs = $req->validate([
+            'addresses' => [
+                'required',
+                function ($attr, $val, $fail) {
+                    if (!collect($val)->flatten()->contains(true)) {
+                        $fail($attr . ' must be chosen at least one.');
+                    }
+                }
+            ]
+        ]);
+
+        $addressesReq = collect($fieldAddrs['addresses'])
+            ->filter(fn($v) => $v === true)
+            ->keys()
+            ->map(fn($key) => str_replace('_', ' ', $key))->toArray();
+
+        $addresses = array_map('trim', explode(",", $hub->addresses));
+
+        foreach ($addressesReq as $val) {
+            if (!in_array($val, $addresses)) {
+                return response()->json([
+                    'msg' => 'Address not present in Opened hub.',
+                ], 422);
+            }
+        }
+
+        $cycleID = $this->getCycle();
+
+
         $driver = DB::getDriverName();
         if ($driver === 'sqlite') {
             $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
@@ -123,15 +149,14 @@ class SyncHubController extends Controller
             $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
         }
 
-        $addresses = array_map('trim', explode(",", $hub->addresses));
 
         $query = YouthInfo::whereDoesntHave('yUser.validated', function ($qq) use ($cycleID) {
             $qq->where('registration_cycle_id', $cycleID);
         })->whereHas('yUser', function ($q) {
-                $q->whereNotNull('user_id');
-            })
+            $q->whereNotNull('user_id');
+        })
             ->whereBetween(DB::raw($ageExpression), [15, 30])
-            ->whereIn('address', $addresses)
+            ->whereIn('address', $addressesReq)
             ->with([
                 'yUser',
                 'yUser.educbg',
@@ -142,19 +167,38 @@ class SyncHubController extends Controller
         return response()->json([
             'hub' => $hub,
             'addr' => $addresses,
+            'addrSel' => $addressesReq,
+            'addrSelByYouth' => $query->pluck('address'),
             'query' => $query,
             'msg' => 'success',
         ]);
     }
 
-    public function pickHub()
+    public function getOpenHub()
     {
-        $hubs = SyncHub::where('status', 'opened')->get();
+        $hub = SyncHub::where('status', 'opened')->first();
+        $addresses = array_map('trim', explode(",", $hub->addresses));
+
+        $counts = YouthInfo::select('address', DB::raw('COUNT(*) as value'))
+            ->whereIn('address', $addresses)
+            ->groupBy('address')
+            ->pluck('value', 'address')
+            ->toArray();
+
+        $q = [];
+        foreach ($addresses as $addr) {
+            $q[] = [
+                'name' => $addr,
+                'value' => $counts[$addr] ?? 0,
+            ];
+        }
 
         return response()->json([
-            'hubs' => $hubs,
+            'hub' => $hub,
+            'q' => $q,
         ]);
     }
+
 
     public function deleteHub($id)
     {

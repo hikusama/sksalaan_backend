@@ -63,7 +63,7 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
 });
 Route::post('/getMapData', [YouthInfoController::class, 'getMapData']);
 
-Route::get('/pickHub', [SyncHubController::class, 'pickHub']);
+Route::get('/getOpenHub', [SyncHubController::class, 'getOpenHub']);
 Route::get('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
 
 
