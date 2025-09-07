@@ -12,6 +12,7 @@ class YouthUser extends Model
     protected $fillable = [
         'user_id',
         'youth_personal_id',
+        'duplicationScan',
         'batchNo',
         'youthType',
         'skills',

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->integer('batchNo');
+            $table->string('duplicationScan')->nullable();
             $table->string('youth_personal_id');
             $table->string('youthType');
             $table->string('skills');
