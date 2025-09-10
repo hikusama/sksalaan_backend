@@ -1,7 +1,7 @@
 # Laravel x RestApi's
 
 
-![alt](resources\images\logo.png)
+![alt](icon.png)
 
  
 
@@ -13,3 +13,39 @@
         alt="Visitor Count" />
     </a>
   </div>
+
+## Setup
+**Step 1:** Install packages
+```bash
+composer install
+```
+
+**Step 2:** Configuring 
+1. Environment
+```bash
+cp .env.example .env
+```
+2. Generate key
+```bash
+php artisan key:generate
+```
+3. Migrate tables
+```bash
+php artisan migrate:f
+```
+4. Connection
+- Get the IPv4
+```bash
+ipconfig
+```
+- Editing the .env, rename APP_URL value
+`http://localhost:8000` to `http://yourcopiedIP:8000`
+- tThen add your copied IP in SANCTUM_STATEFUL_DOMAINS 
+
+**Step 3:** Run the server 
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+
+
