@@ -41,7 +41,10 @@ ipconfig
 - Editing the .env, rename APP_URL value
 `http://localhost:8000` to `http://yourcopiedIP:8000`
 - tThen add your copied IP in SANCTUM_STATEFUL_DOMAINS 
-
+5. Create account by seeding it
+```bash
+php artisan db:seed
+```
 **Step 3:** Run the server 
 ```bash
 php artisan serve --host=0.0.0.0 --port=8000
