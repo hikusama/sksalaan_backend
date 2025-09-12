@@ -12,9 +12,11 @@
         "php": "^8.2",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
+        "laravel/scout": "^10.19",
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^1.1",
-        "phpoffice/phpspreadsheet": "^4.4"
+        "phpoffice/phpspreadsheet": "^4.4",
+        "teamtnt/laravel-scout-tntsearch-driver": "^15.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
