@@ -17,6 +17,63 @@ class YouthInfoController extends Controller
      */
 
 
+    public function getDuplicates()
+    {
+        $groups = YouthUser::with('info')
+            ->whereNotNull('duplicationScan')
+            ->where('duplicationScan', '!=', 'new')
+            ->get()
+            ->groupBy('duplicationScan')
+            ->map(function ($items) {
+                return $items->map(function ($user) {
+                    return [
+                        'id'       => $user->id,
+                        'fname'    => $user->info->fname,
+                        'mname'    => $user->info->mname,
+                        'lname'    => $user->info->lname,
+                    ];
+                });
+            });
+        $totalCount = $groups->flatten(1)->count();
+
+        return response()->json([
+            "groups" => $groups,
+            "totalCount" => $totalCount,
+
+        ]);
+    }
+    public function initializeDuplicates()
+    {
+        DB::statement("UPDATE youth_users SET duplicationScan = NULL");
+
+        DB::statement("SET @serial := 0");
+
+        DB::statement("
+        UPDATE youth_users yu
+        JOIN youth_infos yi ON yu.id = yi.youth_user_id
+        JOIN (
+            SELECT 
+                SOUNDEX(fname) AS sf,
+                SOUNDEX(mname) AS sm,
+                SOUNDEX(lname) AS sl,
+                @serial := @serial + 1 AS group_id
+            FROM youth_infos
+            GROUP BY sf, sm, sl
+            HAVING COUNT(*) > 1
+        ) dup 
+        ON SOUNDEX(yi.fname) = dup.sf
+        AND SOUNDEX(yi.mname) = dup.sm
+        AND SOUNDEX(yi.lname) = dup.sl
+        SET yu.duplicationScan = dup.group_id
+    ");
+
+        return response()->json([
+            "message" => "Duplicate groups initialized",
+        ]);
+    }
+
+
+
     public function getMapData(Request $request)
     {
         $cid = $this->getCycle();
