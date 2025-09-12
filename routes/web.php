@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Auth;
 Route::middleware(['auth', CheckAdmin::class])->get('/web/user', function (Request $request) {
     $user = $request->user()->load('admin');
 
-    $curmonth = date('n'); 
+    $curmonth = date('n');
     $curyr = date('Y');
 
     $currentCycleName = ($curmonth <= 6)
@@ -100,6 +100,8 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
     Route::post('/valAge', [ValidationFormController::class, 'valAge']);
     Route::delete('/deleteCycle/{id}', [RegistrationCycleController::class, 'deleteCycle']);
+    Route::get('/getDuplicates', [YouthInfoController::class, 'getDuplicates']);
+    Route::get('/initializeDuplicates', [YouthInfoController::class, 'initializeDuplicates']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();
