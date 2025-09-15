@@ -83,7 +83,8 @@ class YouthUserController extends Controller
                 ->orWhere('mname', 'LIKE', '%' . $search . '%')
                 ->orWhere('lname', 'LIKE', '%' . $search . '%')
                 ->orWhereHas('yUser', function ($q) use ($search) {
-                    $q->where('batchNo', 'LIKE', '%' . $search . '%');
+                    $q->where('batchNo', $search)
+                        ->orWhere('youth_personal_id', $search);
                 });
         })
             ->when(!empty($youthType), fn($q) => $q->where('youthType', $youthType))
@@ -111,7 +112,7 @@ class YouthUserController extends Controller
             if ($validity === 'all') {
 
                 $query->when($cycleID !== 'all', function ($qq) use ($cycleID) {
-                    $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                    $qq->with('yUser.validated', function ($q) use ($cycleID) {
                         $q->where('registration_cycle_id', $cycleID);
                     });
                 });

@@ -100,8 +100,11 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::get('/getAllCycle', [RegistrationCycleController::class, 'show']);
     Route::post('/valAge', [ValidationFormController::class, 'valAge']);
     Route::delete('/deleteCycle/{id}', [RegistrationCycleController::class, 'deleteCycle']);
-    Route::get('/getDuplicates', [YouthInfoController::class, 'getDuplicates']);
+    Route::patch('/markAllAsReviewed/{id}', [YouthInfoController::class, 'markAllAsReviewed']);
+    Route::patch('/markAsReviewed/{id}', [YouthInfoController::class, 'markAsReviewed']);
+    Route::get('/getDuplicates/{page}', [YouthInfoController::class, 'getDuplicates']);
     Route::get('/initializeDuplicates', [YouthInfoController::class, 'initializeDuplicates']);
+    Route::get('/checkScanned', [YouthInfoController::class, 'checkScanned']);
 
     Route::post('/logout-web', function (Request $request) {
         Auth::guard('web')->logout();
