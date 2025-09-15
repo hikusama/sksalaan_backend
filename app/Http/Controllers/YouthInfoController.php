@@ -9,6 +9,8 @@ use App\Models\YouthInfo;
 use App\Models\YouthUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 
 class YouthInfoController extends Controller
 {
@@ -17,36 +19,108 @@ class YouthInfoController extends Controller
      */
 
 
-    public function getDuplicates()
+    public function checkScanned()
     {
-        $groups = YouthUser::with('info')
-            ->whereNotNull('duplicationScan')
+        $val1 = YouthUser::whereNotNull('duplicationScan')->first();
+        $val2 = YouthUser::where('duplicationScan', 'new')->first();
+        $res = 200;
+        if ($val1) {
+            if ($val2) {
+                $res = 422;
+            }
+        } else {
+            $res = 422;
+        }
+        return response()->json([
+            "msg" => $res === 200 ? "scann all good" : "scan needed",
+        ], $res);
+    }
+    public function markAllAsReviewed($dupID)
+    {
+        $group = YouthUser::where('duplicationScan', $dupID);
+        $group->update(['duplicationScan' => NULL]);
+        return response()->json([
+            "msg" => "Marked all as reviewed operation successfully",
+        ]);
+    }
+
+    public function markAsReviewed($id)
+    {
+        $youth = YouthUser::findOrFail($id);
+        $youth->update(['duplicationScan' => NULL]);
+        return response()->json([
+            "msg" => "Marked as reviewed operation successfully",
+        ]);
+    }
+    public function getDuplicates($page = 1)
+    {
+        $perPage = 10; 
+
+        $groupIds = YouthUser::whereNotNull('duplicationScan')
             ->where('duplicationScan', '!=', 'new')
+            ->pluck('duplicationScan')
+            ->unique()
+            ->values();
+
+        $paginator = new LengthAwarePaginator(
+            $groupIds->forPage($page, $perPage),
+            $groupIds->count(), 
+            $perPage,
+            $page
+        );
+
+        $groups = YouthUser::with('info')
+            ->whereIn('duplicationScan', $paginator->items())
             ->get()
             ->groupBy('duplicationScan')
             ->map(function ($items) {
                 return $items->map(function ($user) {
                     return [
-                        'id'       => $user->id,
-                        'fname'    => $user->info->fname,
-                        'mname'    => $user->info->mname,
-                        'lname'    => $user->info->lname,
+                        'duplicationScan' => $user->duplicationScan,
+                        'id'    => $user->id,
+                        'uuid'    => $user->youth_personal_id,
+                        'fname' => $user->info->fname,
+                        'mname' => $user->info->mname,
+                        'lname' => $user->info->lname,
                     ];
                 });
-            });
-        $totalCount = $groups->flatten(1)->count();
+            })
+            ->values();
+
+
+        /*
+                return $items->map(function ($user) {
+                    return [
+                        'duplicationScan'    => $user->duplicationScan,
+                        'id'    => $user->id,
+                        'uuid'    => $user->youth_personal_id,
+                        'fname' => $user->info->fname,
+                        'mname' => $user->info->mname,
+                        'lname' => $user->info->lname,
+                    ];
+                });
+*/
+
+        // count all youths involved (not just paginated)
+        $totalYouthInvolved = YouthUser::whereNotNull('duplicationScan')
+            ->where('duplicationScan', '!=', 'new')
+            ->count();
 
         return response()->json([
-            "groups" => $groups,
-            "totalCount" => $totalCount,
-
+            "groups"      => $groups,
+            "totalYouth"  => $totalYouthInvolved,   // 👈 all youth across groups
+            "totalGroups" => $groupIds->count(),    // 👈 distinct groups
+            "pagination"  => [
+                "current_page" => $paginator->currentPage(),
+                "total_pages"  => $paginator->lastPage(),
+            ]
         ]);
     }
+
+
     public function initializeDuplicates()
     {
         DB::statement("UPDATE youth_users SET duplicationScan = NULL");
-
-        DB::statement("SET @serial := 0");
 
         DB::statement("
         UPDATE youth_users yu
@@ -56,7 +130,7 @@ class YouthInfoController extends Controller
                 SOUNDEX(fname) AS sf,
                 SOUNDEX(mname) AS sm,
                 SOUNDEX(lname) AS sl,
-                @serial := @serial + 1 AS group_id
+                ROW_NUMBER() OVER (ORDER BY MIN(id)) AS group_id
             FROM youth_infos
             GROUP BY sf, sm, sl
             HAVING COUNT(*) > 1
@@ -65,7 +139,9 @@ class YouthInfoController extends Controller
         AND SOUNDEX(yi.mname) = dup.sm
         AND SOUNDEX(yi.lname) = dup.sl
         SET yu.duplicationScan = dup.group_id
+        WHERE yu.user_id IS NOT NULL
     ");
+
 
         return response()->json([
             "message" => "Duplicate groups initialized",
@@ -155,7 +231,7 @@ class YouthInfoController extends Controller
         if ($validity === 'all') {
 
             $query->when($cycleID !== 'all', function ($qq) use ($cycleID) {
-                $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                $qq->with('yUser.validated', function ($q) use ($cycleID) {
                     $q->where('registration_cycle_id', $cycleID);
                 });
             });
