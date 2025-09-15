@@ -13,20 +13,6 @@ class ValidationFormController extends Controller
         $request->validate([
             'firstname' => 'required|max:60',
             'middlename' => 'required|max:60',
-            'lastname' => [
-                'required',
-                'max:60',
-                function ($attribute, $value, $fail) use ($request) {
-                    $exists = YouthInfo::whereRaw(
-                        'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
-                        [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
-                    )->exists();
-
-                    if ($exists) {
-                        $fail('A youth with the same full name already exists.');
-                    }
-                },
-            ],
             'sex' => 'required|in:Male,Female',
             'gender' => 'nullable|max:40',
             'dateOfBirth' => [
@@ -37,6 +23,24 @@ class ValidationFormController extends Controller
             ],
             'address' => 'required|max:100',
         ]);
+        if ($request->input('type', '') !== 'validate') {
+            $request->validate([
+                'lastname' => [
+                    'required',
+                    'max:60',
+                    function ($attribute, $value, $fail) use ($request) {
+                        $exists = YouthInfo::whereRaw(
+                            'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
+                            [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
+                        )->exists();
+
+                        if ($exists) {
+                            $fail('A youth with the same full name already exists.');
+                        }
+                    },
+                ],
+            ]);
+        }
         return true;
     }
     public function valStep2(Request $request)
