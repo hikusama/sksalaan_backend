@@ -62,9 +62,10 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
     ];
 });
 Route::post('/getMapData', [YouthInfoController::class, 'getMapData']);
-
+// get open
 Route::get('/getOpenHub', [SyncHubController::class, 'getOpenHub']);
-Route::get('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
+// pull
+Route::post('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
 
 
 Route::middleware(CheckCycleOpen::class)->group(function () {
@@ -78,6 +79,11 @@ Route::middleware(CheckCycleOpen::class)->group(function () {
     Route::middleware(['auth:sanctum'])->post('/migrate', [YouthUserController::class, 'migrateFromMobile']);
 });
 
-
+Route::middleware(['auth:sanctum'])->get('/logoutOfficials', function (Request $request) {
+    $request->user()->tokens()->delete();
+    return response()->json([
+        'message' => 'Logged out'
+    ]);
+});
 
 Route::post('/loginOfficials', [AuthController::class, 'loginOfficials']);

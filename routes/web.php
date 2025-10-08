@@ -62,6 +62,7 @@ Route::prefix('web')->middleware(['auth', CheckAdmin::class])->group(function ()
     Route::post('/valStep2Post', [ComposedAnnouncementController::class, 'valStep2Post']);
     Route::post('/compose', [ComposedAnnouncementController::class, 'compose']);
     Route::post('/createHub', [SyncHubController::class, 'createHub']);
+    Route::get('/getAddresses', [SyncHubController::class, 'getAddresses']);
     Route::get('/getHubs', [SyncHubController::class, 'getHubs']);
     Route::post('/openHub', [SyncHubController::class, 'openHub']);
     Route::post('/closeHub', [SyncHubController::class, 'closeHub']);
