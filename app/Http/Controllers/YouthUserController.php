@@ -46,7 +46,7 @@ class YouthUserController extends Controller
         $typeId = $request->input('typeId');
         $cycleID = $request->input('cID');
         $cid = $this->getCycle();
-
+        $cy = null;
         if ($typeId) {
             $validity = strtolower($request->input('validity', 'All'));
             $youthType = strtolower($request->input('youthType'));
@@ -87,12 +87,6 @@ class YouthUserController extends Controller
                         ->orWhere('youth_personal_id', $search);
                 });
         })
-            ->when(!empty($youthType), fn($q) => $q->where('youthType', $youthType))
-            ->when(!empty($sex), fn($q) => $q->where('sex', $sex))
-            ->when(!empty($gender), fn($q) => $q->where('gender', $gender))
-            ->when(!empty($civilStatus), fn($q) => $q->where('civilStatus', $civilStatus))
-
-
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
                 return $linked
@@ -107,15 +101,50 @@ class YouthUserController extends Controller
                 'yUser',
                 'yUser.educbg',
                 'yUser.civicInvolvement'
-            ]);
+            ])
+            ->when(!empty($sex), function ($q) use ($sex, $driver) {
+                if ($driver === 'sqlite') {
+                    $q->whereRaw('LOWER(TRIM(sex)) = LOWER(TRIM(?))', [$sex]);
+                } else {
+                    $q->whereRaw('LOWER(TRIM(sex)) = ?', [$sex]);
+                }
+            })
+            ->when(!empty($gender), function ($q) use ($gender, $driver) {
+                if ($driver === 'sqlite') {
+                    $q->whereRaw('LOWER(TRIM(gender)) = LOWER(TRIM(?))', [$gender]);
+                } else {
+                    $q->whereRaw('LOWER(TRIM(gender)) = ?', [$gender]);
+                }
+            })
+            ->when(!empty($civilStatus), function ($q) use ($civilStatus, $driver) {
+                if ($driver === 'sqlite') {
+                    $q->whereRaw('LOWER(TRIM(civilStatus)) = LOWER(TRIM(?))', [$civilStatus]);
+                } else {
+                    $q->whereRaw('LOWER(TRIM(civilStatus)) = ?', [$civilStatus]);
+                }
+            });
+        $query->whereHas('yUser', function ($sub) use (
+            $driver,
+            $youthType,
+        ) {
+            if (!empty($youthType)) {
+                $column = 'youthType';
+                if ($driver === 'sqlite') {
+                    $sub->whereRaw("LOWER(TRIM($column)) = LOWER(TRIM(?))", [$youthType]);
+                } else {
+                    $sub->whereRaw("LOWER(TRIM($column)) = ?", [$youthType]);
+                }
+            }
+        });
         if ($typeId) {
             if ($validity === 'all') {
-
-                $query->when($cycleID !== 'all', function ($qq) use ($cycleID) {
-                    $qq->with('yUser.validated', function ($q) use ($cycleID) {
-                        $q->where('registration_cycle_id', $cycleID);
+                if ($cy != null) {
+                    $query->when($cy->cycleStatus === 'inactive', function ($qq) use ($cycleID) {
+                        $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                            $q->where('registration_cycle_id', $cycleID);
+                        });
                     });
-                });
+                }
             } else {
                 if ($validity === 'validated') {
                     $query->where(function ($sub) use ($cid) {
@@ -377,7 +406,7 @@ class YouthUserController extends Controller
         }
     }
 
-    private function validateYouthInfo(Request $request)
+    private function validateYouthInfo(Request $request, $youth = null)
     {
 
         $fields = $request->validate([
@@ -386,11 +415,17 @@ class YouthUserController extends Controller
             'lastname' => [
                 'required',
                 'max:60',
-                function ($attribute, $value, $fail) use ($request) {
-                    $exists = YouthInfo::whereRaw(
+                function ($attribute, $value, $fail) use ($request, $youth) {
+                    $query = YouthInfo::whereRaw(
                         'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
                         [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
-                    )->exists();
+                    );
+
+                    if ($youth) {
+                        $query->where('youth_user_id', '!=', $youth->id);
+                    }
+
+                    $exists = $query->exists();
 
                     if ($exists) {
                         $fail('A youth with the same full name already exists.');
@@ -786,7 +821,7 @@ class YouthUserController extends Controller
         ]);
 
         if ($type) {
-            $fields2 = $this->validateYouthInfo($request);
+            $fields2 = $this->validateYouthInfo($request, $youth);
         } else {
             $fields2 = $this->validateYouthValidate($request);
         }
