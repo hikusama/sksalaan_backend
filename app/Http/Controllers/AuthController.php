@@ -96,7 +96,6 @@ class AuthController extends Controller
 
     public function loginAdmin(Request $request)
     {
-
         $cycleID = $this->getCycle();
         $curmonth = date('n');
         $curyr = date('Y');
@@ -147,6 +146,8 @@ class AuthController extends Controller
 
     public function loginOfficials(Request $request)
     {
+        Log::info(json_encode($request->all()));
+
         $cycleID = $this->getCycle();
         $errors = [];
 
@@ -160,7 +161,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-
+        // return response()->json(['dara'=>$user]);
         if (!Hash::check($request->password, $user->password)) {
             $errors['password'] = 'Incorrect Password.';
         }
@@ -201,14 +202,7 @@ class AuthController extends Controller
             ->orderBy('name', "DESC")
             ->with(['user'])
             ->withCount([
-                'insertedYouth as inserted_youth_count' => function ($query) use ($cycleID) {
-                    if ($cycleID) {
-                        $query->where('registration_cycle_id', $cycleID);
-                    } else {
-                        // Always false condition to return 0
-                        $query->whereRaw('0 = 1');
-                    }
-                }
+                'insertedYouth as inserted_youth_count'
             ])
             ->paginate($perPage)
             ->appends(['search' => $search]);
