@@ -54,7 +54,7 @@ class YouthInfoController extends Controller
     }
     public function getDuplicates($page = 1)
     {
-        $perPage = 10; 
+        $perPage = 10;
 
         $groupIds = YouthUser::whereNotNull('duplicationScan')
             ->where('duplicationScan', '!=', 'new')
@@ -64,7 +64,7 @@ class YouthInfoController extends Controller
 
         $paginator = new LengthAwarePaginator(
             $groupIds->forPage($page, $perPage),
-            $groupIds->count(), 
+            $groupIds->count(),
             $perPage,
             $page
         );
@@ -154,7 +154,7 @@ class YouthInfoController extends Controller
     {
         $cid = $this->getCycle();
         $cycleID = $request->input('cID', $cid);
-
+        $cy = null;
         $validity = strtolower($request->input('validity', 'validated'));
         $youthType = strtolower($request->input('youthType'));
         $sex = strtolower($request->input('sex'));
@@ -169,7 +169,9 @@ class YouthInfoController extends Controller
         } else {
             $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
         }
-
+        if ($cycleID !== 'all') {
+            $cy = RegistrationCycle::findOrFail($cycleID);
+        }
 
         $points = [
             'sittio carreon' => [
@@ -222,19 +224,52 @@ class YouthInfoController extends Controller
                 'zone 3',
                 'zone 4'
             )")
-            ->whereHas('yUser.validated')
-            ->when(!empty($youthType), fn($q) => $q->where('youthType', $youthType))
-            ->when(!empty($sex), fn($q) => $q->where('sex', $sex))
-            ->when(!empty($gender), fn($q) => $q->where('gender', $gender))
-            ->when(!empty($civilStatus), fn($q) => $q->where('civilStatus', $civilStatus))
-            ->groupBy(DB::raw('LOWER(address)'));
+            // ->whereHas('yUser.validated')
+            ->when(!empty($sex), function ($q) use ($sex, $driver) {
+                if ($driver === 'sqlite') {
+                    $q->whereRaw('LOWER(TRIM(sex)) = LOWER(TRIM(?))', [$sex]);
+                } else {
+                    $q->whereRaw('LOWER(TRIM(sex)) = ?', [$sex]);
+                }
+            })
+            ->when(!empty($gender), function ($q) use ($gender, $driver) {
+                if ($driver === 'sqlite') {
+                    $q->whereRaw('LOWER(TRIM(gender)) = LOWER(TRIM(?))', [$gender]);
+                } else {
+                    $q->whereRaw('LOWER(TRIM(gender)) = ?', [$gender]);
+                }
+            })
+            ->when(!empty($civilStatus), function ($q) use ($civilStatus, $driver) {
+                if ($driver === 'sqlite') {
+                    $q->whereRaw('LOWER(TRIM(civilStatus)) = LOWER(TRIM(?))', [$civilStatus]);
+                } else {
+                    $q->whereRaw('LOWER(TRIM(civilStatus)) = ?', [$civilStatus]);
+                }
+            });
+        $query->whereHas('yUser', function ($sub) use (
+            $driver,
+            $youthType,
+        ) {
+            if (!empty($youthType)) {
+                $column = 'youthType';
+                if ($driver === 'sqlite') {
+                    $sub->whereRaw("LOWER(TRIM($column)) = LOWER(TRIM(?))", [$youthType]);
+                } else {
+                    $sub->whereRaw("LOWER(TRIM($column)) = ?", [$youthType]);
+                }
+            }
+        });
+
+        $query->groupBy(DB::raw('LOWER(address)'));
         if ($validity === 'all') {
 
-            $query->when($cycleID !== 'all', function ($qq) use ($cycleID) {
-                $qq->with('yUser.validated', function ($q) use ($cycleID) {
-                    $q->where('registration_cycle_id', $cycleID);
+            if ($cy != null) {
+                $query->when($cy->cycleStatus === 'inactive', function ($qq) use ($cycleID) {
+                    $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
+                        $q->where('registration_cycle_id', $cycleID);
+                    });
                 });
-            });
+            }
         } else {
             if ($validity === 'validated') {
                 $query->where(function ($sub) use ($cid) {
@@ -410,7 +445,7 @@ class YouthInfoController extends Controller
             ->get();
 
         $religions = YouthInfo::select(DB::raw("LOWER(religion) as name"), DB::raw('COUNT(*) as value'))
-            ->whereRaw("LOWER(religion) IN ('islam', 'christianity', 'judaism', 'buddhism', 'hinduism', 'atheism', 'others')")
+            ->whereRaw("LOWER(religion) IN ('islam', 'christianity', 'judaism', 'buddhism', 'hinduism', 'atheism', 'other')")
             ->when($cycleID !== 'all', function ($qq) use ($cycleID) {
                 $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
                     $q->where('registration_cycle_id', $cycleID);
