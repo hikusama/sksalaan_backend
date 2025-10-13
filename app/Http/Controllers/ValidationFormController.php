@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\YouthInfo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ValidationFormController extends Controller
 {
@@ -23,24 +24,28 @@ class ValidationFormController extends Controller
             ],
             'address' => 'required|max:100',
         ]);
-        if ($request->input('type', '') !== 'validate') {
-            $request->validate([
-                'lastname' => [
-                    'required',
-                    'max:60',
-                    function ($attribute, $value, $fail) use ($request) {
-                        $exists = YouthInfo::whereRaw(
-                            'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
-                            [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
-                        )->exists();
 
-                        if ($exists) {
-                            $fail('A youth with the same full name already exists.');
-                        }
-                    },
-                ],
-            ]);
-        }
+        $request->validate([
+            'lastname' => [
+                'required',
+                'max:60',
+                function ($attribute, $value, $fail) use ($request) {
+                    $query = YouthInfo::whereRaw(
+                        'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
+                        [strtolower($request->firstname), strtolower($request->middlename), strtolower($request->lastname)]
+                    );
+                    $id = $request->input('id', '');
+                    if ($id != '') {
+                        $query->where('youth_user_id', '!=', $id);
+                    }
+
+                    $exists = $query->exists();
+                    if ($exists) {
+                        $fail('A youth with the same full name already exists.');
+                    }
+                },
+            ],
+        ]);
         return true;
     }
     public function valStep2(Request $request)
