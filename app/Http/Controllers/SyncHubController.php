@@ -5,15 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\RegistrationCycle;
 use App\Models\SyncHub;
 use App\Models\YouthInfo;
+use Carbon\Carbon;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SyncHubController extends Controller
 {
     //
     public function createHub(Request $request)
     {
+
         $fields = $request->validate([
             'addresses' => [
                 'required',
@@ -35,9 +38,6 @@ class SyncHubController extends Controller
                 ]
             ], 422);
         }
-
-
-
         $selectedString = collect($fields['addresses'])
             ->filter(fn($v) => $v === true)
             ->keys()
@@ -55,6 +55,21 @@ class SyncHubController extends Controller
         ]);
     }
 
+    public function getAddresses()
+    {
+        $cycleID = $this->getCycle();
+
+        $res = YouthInfo::whereDoesntHave('yUser.validated', function ($qq) use ($cycleID) {
+            $qq->where('registration_cycle_id', $cycleID);
+        })->distinct()->pluck('address');
+        $addresses = $res->mapWithKeys(function ($addr) {
+            return [$addr => false];
+        })->toArray();
+
+        return response()->json([
+            'addr' => $addresses,
+        ]);
+    }
     public function getHubs()
     {
         $openhub = SyncHub::where('status', 'opened')->first();
@@ -104,10 +119,16 @@ class SyncHubController extends Controller
 
     public function getDataFromHub(Request $req)
     {
+        // Log::info($req->all());
 
         $hub = SyncHub::where('status', 'opened')->first();
-
-        if (!$hub && now()->greaterThan($hub->expires_at)) {
+        if ($hub) {
+            if (Carbon::now()->greaterThan($hub->expires_at)) {
+                return response()->json([
+                    'msg' => 'Hub expired.',
+                ], 422);
+            }
+        } else {
             return response()->json([
                 'msg' => 'Hub is closed.',
             ], 422);
@@ -117,24 +138,29 @@ class SyncHubController extends Controller
             'addresses' => [
                 'required',
                 function ($attr, $val, $fail) {
-                    if (!collect($val)->flatten()->contains(true)) {
+                    if (!collect($val)->pluck('status')->contains(true)) {
                         $fail($attr . ' must be chosen at least one.');
                     }
                 }
             ]
         ]);
 
-        $addressesReq = collect($fieldAddrs['addresses'])
-            ->filter(fn($v) => $v === true)
-            ->keys()
-            ->map(fn($key) => str_replace('_', ' ', $key))->toArray();
 
-        $addresses = array_map('trim', explode(",", $hub->addresses));
+        $addressesReq = collect($fieldAddrs['addresses'])
+            ->filter(fn($a) => $a['status'] === true)
+            ->keys()
+            ->map(fn($key) => strtolower(trim($key)))
+            ->toArray();
+
+        $addresses = collect(explode(',', $hub->addresses))
+            ->map(fn($a) => strtolower(trim($a)))
+            ->toArray();
 
         foreach ($addressesReq as $val) {
             if (!in_array($val, $addresses)) {
                 return response()->json([
-                    'msg' => 'Address not present in Opened hub.',
+                    'val' => $addressesReq,
+                    'msg' => 'Address not present in opened hub.',
                 ], 422);
             }
         }
@@ -156,40 +182,95 @@ class SyncHubController extends Controller
             $q->whereNotNull('user_id');
         })
             ->whereBetween(DB::raw($ageExpression), [15, 30])
-            ->whereIn('address', $addressesReq)
+            ->whereIn(DB::raw('LOWER(address)'), collect($addressesReq)->map(fn($a) => strtolower($a)))
             ->with([
                 'yUser',
                 'yUser.educbg',
                 'yUser.civicInvolvement'
             ])->get();
+        $profiles = $query->map(function ($youth) {
+            return [
+                'youthUser' => [
+                    'orgId' => $youth->yUser->id,
+                    'youthType' => $youth->yUser->youthType,
+                    'skills' => $youth->yUser->skills,
+                    'status' => 'Unvalidated',
+                    'registerAt' => $youth->yUser->created_at,
+                ],
+                'youthInfo' => [
+                    'fname' => $youth->fname,
+                    'mname' => $youth->mname,
+                    'lname' => $youth->lname,
+                    'age' => Carbon::parse($youth->dateOfBirth)->age,
+                    'sex' => $youth->sex,
+                    'gender' => $youth->gender,
+                    'address' => $youth->address,
+                    'dateOfBirth' => $youth->dateOfBirth,
+                    'placeOfBirth' => $youth->placeOfBirth,
+                    'contactNo' => $youth->contactNo,
+                    'religion' => $youth->religion,
+                    'occupation' => $youth->occupation ?? '',
+                    'civilStatus' => $youth->civilStatus,
+                    'noOfChildren' => $youth->noOfChildren ?? 0,
+                    'height' => $youth->height ?? 0,
+                    'weight' => $youth->weight ?? 0,
+                ],
+                'educBgs' => $youth->yUser->educbg->map(fn($e) => [
+                    'level' => $e->level,
+                    'nameOfSchool' => $e->nameOfSchool,
+                    'periodOfAttendance' => $e->periodOfAttendance,
+                    'yearGraduate' => $e->yearGraduate,
+                ]),
+                'civicInvolvements' => $youth->yUser->civicInvolvement->map(fn($c) => [
+                    'nameOfOrganization' => $c->nameOfOrganization,
+                    'addressOfOrganization' => $c->addressOfOrganization,
+                    'start' => $c->start,
+                    'end' => $c->end,
+                    'yearGraduated' => $c->yearGraduated,
+                ]),
+            ];
+        });
+
 
 
         return response()->json([
             'hub' => $hub,
-            'addr' => $addresses,
-            'addrSel' => $addressesReq,
-            'addrSelByYouth' => $query->pluck('address'),
-            'query' => $query,
+            'profiles' => $profiles,
             'msg' => 'success',
         ]);
     }
 
     public function getOpenHub()
     {
+        $cycleID = $this->getCycle();
+
         $hub = SyncHub::where('status', 'opened')->first();
+        if ($hub) {
+            if (now()->greaterThan($hub->expires_at)) {
+                return response()->json([
+                    'msg' => 'Hub expired.',
+                ], 422);
+            }
+        } else {
+            return response()->json([
+                'msg' => 'Hub is closed.',
+            ], 422);
+        }
         $addresses = array_map('trim', explode(",", $hub->addresses));
 
         $counts = YouthInfo::select('address', DB::raw('COUNT(*) as value'))
             ->whereIn('address', $addresses)
-            ->groupBy('address')
+            ->whereDoesntHave('yUser.validated', function ($qq) use ($cycleID) {
+                $qq->where('registration_cycle_id', $cycleID);
+            })->groupBy('address')
             ->pluck('value', 'address')
             ->toArray();
 
         $q = [];
         foreach ($addresses as $addr) {
-            $q[] = [
-                'name' => $addr,
+            $q[$addr] = [
                 'value' => $counts[$addr] ?? 0,
+                'status' => false,
             ];
         }
 
