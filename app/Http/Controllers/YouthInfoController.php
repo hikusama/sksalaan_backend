@@ -408,7 +408,7 @@ class YouthInfoController extends Controller
 
         $gender = YouthInfo::select(DB::raw("COALESCE(NULLIF(LOWER(gender), ''), 'not-specified') as name"), DB::raw('COUNT(*) as value'))
             ->where(function ($q) {
-                $q->whereRaw("LOWER(gender) IN ('non-binary', 'binary')")
+                $q->whereRaw("LOWER(gender) IN ('non-binary', 'binary', 'other')")
                     ->orWhereNull('gender')
                     ->orWhere('gender', '');
             })
@@ -445,7 +445,7 @@ class YouthInfoController extends Controller
             ->get();
 
         $religions = YouthInfo::select(DB::raw("LOWER(religion) as name"), DB::raw('COUNT(*) as value'))
-            ->whereRaw("LOWER(religion) IN ('islam', 'christianity', 'judaism', 'buddhism', 'hinduism', 'atheism', 'other')")
+            ->whereRaw("LOWER(religion) IN ('islam', 'christianity', 'judaism', 'buddhism', 'hinduism', 'other')")
             ->when($cycleID !== 'all', function ($qq) use ($cycleID) {
                 $qq->whereHas('yUser.validated', function ($q) use ($cycleID) {
                     $q->where('registration_cycle_id', $cycleID);
