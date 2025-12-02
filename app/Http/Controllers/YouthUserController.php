@@ -572,11 +572,9 @@ class YouthUserController extends Controller
         }
         $migrateData = $request->all();
 
-        $attempted = count($migrateData);
-        $failed = [];
-        $submitted = [];
         $readyData = [];
-
+        $ex = 0;
+        $regs = 0;
         foreach ($migrateData as $data) {
             try {
                 $userValidator = Validator::make($data['user'], [
@@ -586,8 +584,31 @@ class YouthUserController extends Controller
                 if ($userValidator->fails()) {
                     throw new \Exception('User validation failed');
                 }
-
                 $infoRequest = new Request($data['info']);
+                try {
+                    $infoRequest->validate([
+                        'fname' => 'required|max:60',
+                        'mname' => 'required|max:60',
+                        'lname' => [
+                            'required',
+                            'max:60',
+                            function ($attribute, $value, $fail) use ($infoRequest) {
+                                $exists = YouthInfo::whereRaw(
+                                    'LOWER(fname) = ? AND LOWER(mname) = ? AND LOWER(lname) = ?',
+                                    [strtolower($infoRequest->fname), strtolower($infoRequest->mname), strtolower($infoRequest->lname)]
+                                )->exists();
+
+                                if ($exists) {
+                                    $fail('A youth with the same full name already exists.');
+                                }
+                            },
+                        ],
+                    ]);
+                } catch (\Throwable $th) {
+                    $ex += 1;
+                    continue;
+                }
+
                 $validatedInfo = $this->validateYouthInfoRaw($infoRequest);
 
                 $educRequest = new Request(['educBg' => $data['educBG']]);
@@ -603,11 +624,11 @@ class YouthUserController extends Controller
                     'civic' => $validatedCivic ?: [],
                 ];
 
-                $submitted[] = $data['user']['id'] ?? null;
+                // $submitted[] = $data['user']['id'] ?? null;
             } catch (\Throwable $th) {
                 Log::info("error validation" . $th->getMessage());
 
-                $failed[] = $data['user']['id'] ?? null;
+                // $failed[] = $data['user']['id'] ?? null;
             }
         }
         $uuid = $request->user()->id;
@@ -651,6 +672,7 @@ class YouthUserController extends Controller
                         }
                     }
                 }
+                $regs += 1;
                 ValidateYouth::create([
                     'youth_user_id' => $rgid,
                     'registration_cycle_id' => $cycleID,
@@ -672,11 +694,12 @@ class YouthUserController extends Controller
                 'error' => $th->getMessage(),
             ], 500);
         }
+
         $res = [
-            'attempted' => $attempted,
-            'submitted' => $submitted,
-            'failed' => $failed,
+            'regs' => $regs,
+            'ex' => $ex,
         ];
+        Log::info("log success: " . json_encode($res));
         return response()->json($res, 200);
     }
     public function validateYouthInfoRaw(Request $request)
@@ -927,6 +950,160 @@ class YouthUserController extends Controller
         }
         return response()->json(['message' => $type ? $msg : 'Validated successfully...']);
     }
+
+
+
+    public function validateFromMobile(Request $request)
+    {
+        $cycleID = $this->getCycle();
+
+        if (!$cycleID) {
+            return response()->json(['error' => 'No active cycle.'], 400);
+        }
+        $request->validate([
+            'list' => 'required|array|min:1',
+        ]);
+
+        $results = [];
+        $sc = 0;
+        $val = 0;
+        $fail = 0;
+
+        foreach ($request->input('list') as $index => $item) {
+            try {
+
+                // --- VALIDATE ---
+                $userFields = Validator::make($item['user'] ?? [], [
+                    'id'        => 'required|integer',
+                    'youthType' => 'required|string|max:255',
+                    'skills'    => 'required|string|max:100',
+                    'created_at' => 'nullable|date',
+                ])->validate();
+
+                $infoFields = Validator::make($item['info'] ?? [], [
+                    'fname'        => 'required|string|max:255',
+                    'mname'        => 'nullable|string|max:255',
+                    'lname'        => 'required|string|max:255',
+                    'sex'          => 'nullable|string|max:20',
+                    'gender'       => 'nullable|string|max:20',
+                    'address'      => 'required|string|max:100',
+                    'dateOfBirth'  => 'required|date',
+                    'placeOfBirth' => 'nullable|string|max:100',
+                    'contactNo'    => 'required|regex:/^09\d{9}$/',
+                    'height'       => 'nullable|integer|min:0|max:300',
+                    'weight'       => 'nullable|integer|min:0|max:200',
+                    'religion'     => 'required|string|max:100',
+                    'occupation'   => 'nullable|string|max:100',
+                    'civilStatus'  => 'required|string|max:100',
+                    'noOfChildren' => 'nullable|integer|min:0|max:30',
+                    'created_at'   => 'nullable|date',
+                ])->validate();
+
+                $educFields = Validator::make(['educBG' => $item['educBG'] ?? []], [
+                    'educBG' => 'nullable|array',
+                    'educBG.*.id' => 'nullable|integer',
+                    'educBG.*.level' => 'required|string|max:255',
+                    'educBG.*.nameOfSchool' => 'required|string|max:255',
+                    'educBG.*.periodOfAttendance' => 'required|string|max:255',
+                    'educBG.*.yearGraduate' => 'nullable|string|max:20',
+                    'educBG.*.created_at' => 'nullable|date',
+                ])->validate();
+
+                $civicFields = Validator::make(['civic' => $item['civic'] ?? []], [
+                    'civic' => 'nullable|array',
+                    'civic.*.id' => 'nullable|integer',
+                    'civic.*.nameOfOrganization' => 'required|string|max:255',
+                    'civic.*.addressOfOrganization' => 'required|string|max:255',
+                    'civic.*.start' => 'required|string|max:50',
+                    'civic.*.end' => 'nullable|string|max:50',
+                    'civic.*.yearGraduated' => 'nullable|string|max:20',
+                    'civic.*.created_at' => 'nullable|date',
+                ])->validate();
+
+                // --- FETCH EXISTING USER ---
+                $youth = YouthUser::findOrFail($userFields['id']);
+                $youth->load('info', 'educbg', 'civicInvolvement');
+                $existingValidation = ValidateYouth::where('youth_user_id', $youth->id)
+                    ->where('registration_cycle_id', $cycleID)
+                    ->exists();
+                if ($existingValidation) {
+                    $val += 1;
+                    continue;
+                }
+                DB::beginTransaction();
+
+
+                // --- UPDATE USER ---
+                $youth->fill($userFields);
+                if ($youth->isDirty()) {
+                    $youth->save();
+                }
+
+                // --- UPDATE INFO ---
+                if ($youth->info) {
+                    $youth->info->fill($infoFields);
+                    if ($youth->info->isDirty()) {
+                        $youth->info->save();
+                    }
+                }
+
+                // --- UPDATE EDUCATION ---
+                $educIds = collect($educFields['educBG'] ?? [])->pluck('id')->filter();
+                $youth->educbg()->whereNotIn('id', $educIds)->delete();
+
+                foreach ($educFields['educBG'] ?? [] as $eduData) {
+                    if (!empty($eduData['id'])) {
+                        $educ = $youth->educbg()->find($eduData['id']);
+                        if ($educ) {
+                            $educ->fill($eduData);
+                            if ($educ->isDirty()) {
+                                $educ->save();
+                            }
+                        }
+                    } else {
+                        $youth->educbg()->create($eduData);
+                    }
+                }
+
+                // --- UPDATE CIVIC ---
+                $civicIds = collect($civicFields['civic'] ?? [])->pluck('id')->filter();
+                $youth->civicInvolvement()->whereNotIn('id', $civicIds)->delete();
+
+                foreach ($civicFields['civic'] ?? [] as $civicData) {
+                    if (!empty($civicData['id'])) {
+                        $civic = $youth->civicInvolvement()->find($civicData['id']);
+                        if ($civic) {
+                            $civic->fill($civicData);
+                            if ($civic->isDirty()) {
+                                $civic->save();
+                            }
+                        }
+                    } else {
+                        $youth->civicInvolvement()->create($civicData);
+                        $changed = true;
+                    }
+                }
+                ValidateYouth::create([
+                    'youth_user_id' => $youth->id,
+                    'registration_cycle_id' => $cycleID,
+                ]);
+                DB::commit();
+
+                $sc += 1;
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                $fail += 1;
+            }
+        }
+
+        return response()->json([
+            'sc' => $sc,
+            'fail' => $fail,
+            'val' => $val,
+            'message' => 'Bulk validation success.',
+        ]);
+    }
+
 
 
 

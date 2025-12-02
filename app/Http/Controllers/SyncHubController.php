@@ -216,12 +216,14 @@ class SyncHubController extends Controller
                     'weight' => $youth->weight ?? 0,
                 ],
                 'educBgs' => $youth->yUser->educbg->map(fn($e) => [
+                    'orgId' => $e->id,
                     'level' => $e->level,
                     'nameOfSchool' => $e->nameOfSchool,
                     'periodOfAttendance' => $e->periodOfAttendance,
                     'yearGraduate' => $e->yearGraduate,
                 ]),
                 'civicInvolvements' => $youth->yUser->civicInvolvement->map(fn($c) => [
+                    'orgId' => $c->id,
                     'nameOfOrganization' => $c->nameOfOrganization,
                     'addressOfOrganization' => $c->addressOfOrganization,
                     'start' => $c->start,
