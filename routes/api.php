@@ -77,6 +77,7 @@ Route::middleware(CheckCycleOpen::class)->group(function () {
     Route::post('/vals3b', [ValidationFormController::class, 'valStep3b']);
     Route::post('/vals4b', [ValidationFormController::class, 'valStep4b']);
     Route::middleware(['auth:sanctum'])->post('/migrate', [YouthUserController::class, 'migrateFromMobile']);
+    Route::middleware(['auth:sanctum'])->post('/validate', [YouthUserController::class, 'validateFromMobile']);
 });
 
 Route::middleware(['auth:sanctum'])->get('/logoutOfficials', function (Request $request) {

@@ -573,8 +573,8 @@ class YouthUserController extends Controller
         $migrateData = $request->all();
 
         $readyData = [];
-        $ex = 0;
-        $regs = 0;
+        $ex = [];
+        $regs = [];
         foreach ($migrateData as $data) {
             try {
                 $userValidator = Validator::make($data['user'], [
@@ -605,7 +605,7 @@ class YouthUserController extends Controller
                         ],
                     ]);
                 } catch (\Throwable $th) {
-                    $ex += 1;
+                    array_push($ex, $data['user']['id']);
                     continue;
                 }
 
@@ -640,12 +640,13 @@ class YouthUserController extends Controller
 
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
             foreach ($readyData as $youth) {
-                $rgid = $youth['user']['id'];
+                // $rgid = $youth['user']['id'];
                 unset($youth['user']['id']);
 
                 $userData = array_merge($youth['user'], [
                     'user_id' => $uuid,
                     'youth_personal_id' => $youth_personal_id,
+                    'batchNo' => $batchNo,
                 ]);
                 $youth_user_id = DB::table('youth_users')->insertGetId($userData);
 
@@ -672,20 +673,22 @@ class YouthUserController extends Controller
                         }
                     }
                 }
-                $regs += 1;
+
+                array_push($regs, $youth_user_id);
                 ValidateYouth::create([
-                    'youth_user_id' => $rgid,
+                    'youth_user_id' => $youth_user_id,
                     'registration_cycle_id' => $cycleID,
                 ]);
             }
 
             // DB::rollBack();
             DB::commit();
-
-            Bulk_logger::create([
-                'user_id' => $uuid,
-                'batchNo' => $batchNo,
-            ]);
+            if (count($regs) > 0) {
+                Bulk_logger::create([
+                    'user_id' => $uuid,
+                    'batchNo' => $batchNo,
+                ]);
+            }
         } catch (\Throwable $th) {
             Log::info("inserting error: " . $th->getMessage());
             DB::rollBack();
@@ -699,7 +702,6 @@ class YouthUserController extends Controller
             'regs' => $regs,
             'ex' => $ex,
         ];
-        Log::info("log success: " . json_encode($res));
         return response()->json($res, 200);
     }
     public function validateYouthInfoRaw(Request $request)
@@ -960,16 +962,15 @@ class YouthUserController extends Controller
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
         }
-        $request->validate([
-            'list' => 'required|array|min:1',
-        ]);
 
-        $results = [];
-        $sc = 0;
-        $val = 0;
-        $fail = 0;
 
-        foreach ($request->input('list') as $index => $item) {
+        // $results = [];
+        $uv = [];
+        $val = [];
+        $fail = [];
+        $nf = [];
+
+        foreach ($request->all() as $item) {
             try {
 
                 // --- VALIDATE ---
@@ -1021,13 +1022,18 @@ class YouthUserController extends Controller
                 ])->validate();
 
                 // --- FETCH EXISTING USER ---
-                $youth = YouthUser::findOrFail($userFields['id']);
+                $youth = YouthUser::find($userFields['id']);
+                if (!$youth) {
+                    array_push($nf, $item['user']['idM']);
+                    continue;
+                }
+
                 $youth->load('info', 'educbg', 'civicInvolvement');
                 $existingValidation = ValidateYouth::where('youth_user_id', $youth->id)
                     ->where('registration_cycle_id', $cycleID)
                     ->exists();
                 if ($existingValidation) {
-                    $val += 1;
+                    array_push($val, $youth->id);
                     continue;
                 }
                 DB::beginTransaction();
@@ -1088,16 +1094,18 @@ class YouthUserController extends Controller
                     'registration_cycle_id' => $cycleID,
                 ]);
                 DB::commit();
-
-                $sc += 1;
+                array_push($ex, $youth->id);
             } catch (\Throwable $e) {
                 DB::rollBack();
-                $fail += 1;
+                array_push($fail, $youth->id);
+                Log::info('error0909', $e->getMessage());
             }
         }
 
+
         return response()->json([
-            'sc' => $sc,
+            'nf' => $nf,
+            'uv' => $uv,
             'fail' => $fail,
             'val' => $val,
             'message' => 'Bulk validation success.',
