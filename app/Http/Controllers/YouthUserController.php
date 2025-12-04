@@ -1033,7 +1033,7 @@ class YouthUserController extends Controller
                     ->where('registration_cycle_id', $cycleID)
                     ->exists();
                 if ($existingValidation) {
-                    array_push($val, $youth->id);
+                    array_push($val, $item['user']['idM']);
                     continue;
                 }
                 DB::beginTransaction();
@@ -1094,10 +1094,10 @@ class YouthUserController extends Controller
                     'registration_cycle_id' => $cycleID,
                 ]);
                 DB::commit();
-                array_push($ex, $youth->id);
+                array_push($ex, $item['user']['idM']);
             } catch (\Throwable $e) {
                 DB::rollBack();
-                array_push($fail, $youth->id);
+                array_push($fail, $item['user']['idM']);
                 Log::info('error0909', $e->getMessage());
             }
         }

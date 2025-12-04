@@ -52,24 +52,23 @@ Route::middleware(['auth:sanctum'])->get('/userAPI', function (Request $request)
         }
 
         $user = $request->user()->load('skofficials');
+        $expires_at = $token->expires_at;
     } catch (\Throwable $th) {
         return response()->json(['error' => 'Server error'], 500);
     }
 
     return [
+        'expires_at'  => $expires_at,
         'user'  => $user,
         'cycle' => $activeCycle,
     ];
 });
-Route::post('/getMapData', [YouthInfoController::class, 'getMapData']);
-// get open
-Route::get('/getOpenHub', [SyncHubController::class, 'getOpenHub']);
-// pull
-Route::post('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
 
 
 Route::middleware(CheckCycleOpen::class)->group(function () {
-
+    Route::post('/getMapData', [YouthInfoController::class, 'getMapData']);
+    Route::get('/getOpenHub', [SyncHubController::class, 'getOpenHub']);
+    Route::post('/getDataFromHub', [SyncHubController::class, 'getDataFromHub']);
     Route::post('/vals1', [ValidationFormController::class, 'valStep1']);
     Route::post('/vals2', [ValidationFormController::class, 'valStep2']);
     Route::post('/vals3', [ValidationFormController::class, 'valStep3']);
