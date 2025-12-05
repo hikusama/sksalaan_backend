@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('mname');
             $table->string('lname');
             $table->string('address');
-            $table->timestamp('dateOfBirth');
+            $table->date('dateOfBirth');
             $table->string('placeOfBirth');
             $table->string('contactNo');
             $table->integer('height')->nullable();

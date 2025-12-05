@@ -48,7 +48,7 @@ class JobPlacementController extends Controller
                 $qq->join('validated_youths', 'validated_youths.youth_user_id', '=', 'youth_users.id')
                     ->where('validated_youths.registration_cycle_id', $cycleID);
             })
-            ->groupBy('job_supports.id')
+            ->distinct('job_supports.id')
             ->orderBy("youth_infos.$sortBy", 'DESC')
             ->select(
                 'youth_infos.youth_user_id',

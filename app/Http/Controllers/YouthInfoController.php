@@ -120,31 +120,213 @@ class YouthInfoController extends Controller
 
     public function initializeDuplicates()
     {
-        DB::statement("UPDATE youth_users SET duplicationScan = NULL");
+        // Reset previous scans
+        DB::table('youth_users')->update(['duplicationScan' => null]);
 
-        DB::statement("
-        UPDATE youth_users yu
-        JOIN youth_infos yi ON yu.id = yi.youth_user_id
-        JOIN (
-            SELECT 
-                SOUNDEX(fname) AS sf,
-                SOUNDEX(mname) AS sm,
-                SOUNDEX(lname) AS sl,
-                ROW_NUMBER() OVER (ORDER BY MIN(id)) AS group_id
-            FROM youth_infos
-            GROUP BY sf, sm, sl
-            HAVING COUNT(*) > 1
-        ) dup 
-        ON SOUNDEX(yi.fname) = dup.sf
-        AND SOUNDEX(yi.mname) = dup.sm
-        AND SOUNDEX(yi.lname) = dup.sl
-        SET yu.duplicationScan = dup.group_id
-        WHERE yu.user_id IS NOT NULL
-    ");
+        $mainGroups = [];
 
+        // Stage 1: SOUNDEX grouping (collect groups into main array)
+        $soundexGroups = DB::table('youth_infos')
+            ->select(DB::raw('SOUNDEX(fname) as sf, SOUNDEX(mname) as sm, SOUNDEX(lname) as sl, COUNT(*) as cnt'))
+            ->groupBy('sf', 'sm', 'sl')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+
+        foreach ($soundexGroups as $g) {
+            $userIds = DB::table('youth_infos as yi')
+                ->join('youth_users as yu', 'yu.id', '=', 'yi.youth_user_id')
+                ->whereRaw('SOUNDEX(yi.fname) = ? AND SOUNDEX(yi.mname) = ? AND SOUNDEX(yi.lname) = ?', [$g->sf, $g->sm, $g->sl])
+                ->whereNotNull('yu.user_id')
+                ->distinct()
+                ->pluck('yu.id')
+                ->unique()
+                ->values()
+                ->all();
+
+            if (count($userIds) > 1) {
+                $mainGroups[] = $userIds;
+            }
+        }
+
+        // Build a flat list of already grouped IDs to skip in next stage
+        $alreadyGrouped = [];
+        foreach ($mainGroups as $g) {
+            $alreadyGrouped = array_merge($alreadyGrouped, $g);
+        }
+        $alreadyGrouped = array_unique($alreadyGrouped);
+
+        // Stage 2: Normalized exact-name matching for remaining (trim/lower)
+        $remainingQuery = DB::table('youth_users as yu')
+            ->join('youth_infos as yi', 'yi.youth_user_id', '=', 'yu.id')
+            ->whereNotNull('yu.user_id');
+
+        if (!empty($alreadyGrouped)) {
+            $remainingQuery->whereNotIn('yu.id', $alreadyGrouped);
+        }
+
+        $remainingGroups = $remainingQuery
+            ->select(DB::raw('LOWER(TRIM(yi.fname)) as fname, LOWER(TRIM(yi.mname)) as mname, LOWER(TRIM(yi.lname)) as lname, GROUP_CONCAT(yu.id) as ids, COUNT(*) as cnt'))
+            ->groupBy('fname', 'mname', 'lname')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+
+        foreach ($remainingGroups as $rg) {
+            $ids = array_filter(explode(',', $rg->ids));
+            $ids = array_map('intval', $ids);
+            // ensure none of these ids are already grouped
+            $ids = array_values(array_diff($ids, $alreadyGrouped));
+            if (count($ids) > 1) {
+                $mainGroups[] = $ids;
+                $alreadyGrouped = array_merge($alreadyGrouped, $ids);
+                $alreadyGrouped = array_unique($alreadyGrouped);
+            }
+        }
+
+        // Stage 3: Fuzzy matching on remaining ungrouped records (levenshtein + similarity)
+        $remainingQuery2 = DB::table('youth_users as yu')
+            ->join('youth_infos as yi', 'yi.youth_user_id', '=', 'yu.id')
+            ->whereNotNull('yu.user_id');
+
+        if (!empty($alreadyGrouped)) {
+            $remainingQuery2->whereNotIn('yu.id', $alreadyGrouped);
+        }
+
+        $remaining2 = $remainingQuery2->select('yu.id', 'yi.fname', 'yi.mname', 'yi.lname')->get();
+
+        $rows = [];
+        foreach ($remaining2 as $r) {
+            $fname = strtolower(trim($r->fname ?? ''));
+            $mname = strtolower(trim($r->mname ?? ''));
+            $lname = strtolower(trim($r->lname ?? ''));
+            $full = trim($fname . ' ' . $mname . ' ' . $lname);
+            $rows[$r->id] = ['fname' => $fname, 'mname' => $mname, 'lname' => $lname, 'full' => $full];
+        }
+
+        $processed = [];
+        foreach ($rows as $id => $data) {
+            if (isset($processed[$id])) {
+                continue;
+            }
+            $group = [$id];
+            $processed[$id] = true;
+            foreach ($rows as $oid => $odata) {
+                if ($oid === $id || isset($processed[$oid])) {
+                    continue;
+                }
+
+                if (strlen($data['lname']) === 0 || strlen($odata['lname']) === 0) {
+                    continue;
+                }
+
+                $initialMatch = substr($data['lname'], 0, 2) === substr($odata['lname'], 0, 2);
+                $lnameDist = levenshtein($data['lname'], $odata['lname']);
+                similar_text($data['full'], $odata['full'], $percent);
+
+                if (($lnameDist <= 2 && $percent >= 60) || ($initialMatch && $percent >= 75) || $lnameDist <= 1) {
+                    $group[] = $oid;
+                    $processed[$oid] = true;
+                }
+            }
+
+            if (count($group) > 1) {
+                // ensure none of the group members are already in mainGroups (double-check)
+                $group = array_values(array_diff($group, $alreadyGrouped));
+                if (count($group) > 1) {
+                    $mainGroups[] = $group;
+                    $alreadyGrouped = array_merge($alreadyGrouped, $group);
+                    $alreadyGrouped = array_unique($alreadyGrouped);
+                }
+            }
+        }
+
+        // Stage 4: Try to attach leftover ungrouped records to existing groups
+        // This helps cases like "Nakamoto" vs "Nakamotos" where exact/grouped
+        // matches already exist but a similar variant was left out.
+        $leftover = DB::table('youth_users as yu')
+            ->join('youth_infos as yi', 'yi.youth_user_id', '=', 'yu.id')
+            ->whereNotNull('yu.user_id')
+            ->when(!empty($alreadyGrouped), function ($q) use ($alreadyGrouped) {
+                $q->whereNotIn('yu.id', $alreadyGrouped);
+            })
+            ->select('yu.id')
+            ->pluck('id')
+            ->map(fn($v) => intval($v))
+            ->all();
+
+        if (!empty($leftover) && !empty($mainGroups)) {
+            // Build a quick lookup of leftover info strings to avoid repeated queries
+            $leftoverInfos = [];
+            $leftoverRows = DB::table('youth_infos')->whereIn('youth_user_id', $leftover)->get();
+            foreach ($leftoverRows as $lr) {
+                $lfname = strtolower(trim($lr->fname ?? ''));
+                $lmname = strtolower(trim($lr->mname ?? ''));
+                $llname = strtolower(trim($lr->lname ?? ''));
+                $leftoverInfos[intval($lr->youth_user_id)] = [
+                    'fname' => $lfname,
+                    'mname' => $lmname,
+                    'lname' => $llname,
+                    'full' => trim($lfname . ' ' . $lmname . ' ' . $llname),
+                ];
+            }
+
+            // For each existing group, get a representative full-name and compare leftovers to it
+            foreach ($mainGroups as $gIndex => $grp) {
+                if (empty($grp)) {
+                    continue;
+                }
+                $repId = $grp[0];
+                $repInfo = DB::table('youth_infos')->where('youth_user_id', $repId)->first();
+                if (!$repInfo) {
+                    continue;
+                }
+                $repFname = strtolower(trim($repInfo->fname ?? ''));
+                $repMname = strtolower(trim($repInfo->mname ?? ''));
+                $repLname = strtolower(trim($repInfo->lname ?? ''));
+                $repFull = trim($repFname . ' ' . $repMname . ' ' . $repLname);
+
+                foreach ($leftoverInfos as $lid => $ldata) {
+                    // Skip if already added elsewhere (may have been merged in earlier iteration)
+                    if (in_array($lid, $mainGroups[$gIndex], true)) {
+                        continue;
+                    }
+
+                    if (strlen($repLname) === 0 || strlen($ldata['lname']) === 0) {
+                        continue;
+                    }
+
+                    $initialMatch = substr($repLname, 0, 2) === substr($ldata['lname'], 0, 2);
+                    $lnameDist = levenshtein($repLname, $ldata['lname']);
+                    similar_text($repFull, $ldata['full'], $percent);
+
+                    if (($lnameDist <= 2 && $percent >= 60) || ($initialMatch && $percent >= 75) || $lnameDist <= 1) {
+                        // attach leftover id to this group
+                        $mainGroups[$gIndex][] = $lid;
+                        // remove from leftoverInfos so we don't reprocess it
+                        unset($leftoverInfos[$lid]);
+                        // also add to alreadyGrouped
+                        $alreadyGrouped[] = $lid;
+                    }
+                }
+            }
+
+            // normalize alreadyGrouped
+            $alreadyGrouped = array_values(array_unique($alreadyGrouped));
+        }
+
+        // Assign numeric group ids sequentially from mainGroups
+        $groupId = 1;
+        foreach ($mainGroups as $grp) {
+            DB::table('youth_users')->whereIn('id', $grp)->update(['duplicationScan' => $groupId]);
+            $groupId++;
+        }
 
         return response()->json([
-            "message" => "Duplicate groups initialized",
+            'message' => 'Duplicate groups initialized',
+            'stages' => [
+                'stage1' => 'soundex',
+                'stage2' => 'normalized_exact',
+            ],
+            'groups_assigned' => count($mainGroups),
         ]);
     }
 

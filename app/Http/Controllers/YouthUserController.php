@@ -47,6 +47,18 @@ class YouthUserController extends Controller
         $cycleID = $request->input('cID');
         $cid = $this->getCycle();
         $cy = null;
+
+        // Initialize variables
+        $validity = 'all';
+        $youthType = '';
+        $sex = '';
+        $gender = '';
+        $civilStatus = '';
+        $ageType = null;
+        $ageValue = [];
+        $qualification = 'All';
+        $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
+
         if ($typeId) {
             $validity = strtolower($request->input('validity', 'All'));
             $youthType = strtolower($request->input('youthType'));
@@ -56,13 +68,6 @@ class YouthUserController extends Controller
             $ageType = $request->input('ageType');
             $ageValue = $request->input('ageValue', []);
             $qualification = strtolower($request->input('qualification', 'All'));
-
-            $driver = DB::getDriverName();
-            if ($driver === 'sqlite') {
-                $ageExpression = 'CAST((strftime("%Y", "now") - strftime("%Y", dateOfBirth)) AS INTEGER)';
-            } else {
-                $ageExpression = 'TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE())';
-            }
 
             if ($cycleID !== 'all') {
                 $cy = RegistrationCycle::findOrFail($cycleID);
@@ -78,15 +83,16 @@ class YouthUserController extends Controller
             return $page;
         });
 
-        $query = YouthInfo::where(function ($query) use ($search) {
-            $query->where('fname', 'LIKE', '%' . $search . '%')
-                ->orWhere('mname', 'LIKE', '%' . $search . '%')
-                ->orWhere('lname', 'LIKE', '%' . $search . '%')
-                ->orWhereHas('yUser', function ($q) use ($search) {
-                    $q->where('batchNo', $search)
-                        ->orWhere('youth_personal_id', $search);
-                });
-        })
+        $query = YouthInfo::select('youth_infos.*')
+            ->where(function ($query) use ($search) {
+                $query->where('fname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('mname', 'LIKE', '%' . $search . '%')
+                    ->orWhere('lname', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('yUser', function ($q) use ($search) {
+                        $q->where('batchNo', $search)
+                            ->orWhere('youth_personal_id', $search);
+                    });
+            })
             ->when(!is_null($typeId), function ($query) use ($typeId) {
                 $linked = filter_var($typeId, FILTER_VALIDATE_BOOLEAN);
                 return $linked
@@ -97,45 +103,22 @@ class YouthUserController extends Controller
                         $q->whereNull('user_id');
                     });
             })
-            ->with([
-                'yUser',
-                'yUser.educbg',
-                'yUser.civicInvolvement'
-            ])
-            ->when(!empty($sex), function ($q) use ($sex, $driver) {
-                if ($driver === 'sqlite') {
-                    $q->whereRaw('LOWER(TRIM(sex)) = LOWER(TRIM(?))', [$sex]);
-                } else {
-                    $q->whereRaw('LOWER(TRIM(sex)) = ?', [$sex]);
-                }
+            ->when(!empty($sex), function ($q) use ($sex) {
+                $q->whereRaw('LOWER(TRIM(sex)) = ?', [$sex]);
             })
-            ->when(!empty($gender), function ($q) use ($gender, $driver) {
-                if ($driver === 'sqlite') {
-                    $q->whereRaw('LOWER(TRIM(gender)) = LOWER(TRIM(?))', [$gender]);
-                } else {
-                    $q->whereRaw('LOWER(TRIM(gender)) = ?', [$gender]);
-                }
+            ->when(!empty($gender), function ($q) use ($gender) {
+                $q->whereRaw('LOWER(TRIM(gender)) = ?', [$gender]);
             })
-            ->when(!empty($civilStatus), function ($q) use ($civilStatus, $driver) {
-                if ($driver === 'sqlite') {
-                    $q->whereRaw('LOWER(TRIM(civilStatus)) = LOWER(TRIM(?))', [$civilStatus]);
-                } else {
-                    $q->whereRaw('LOWER(TRIM(civilStatus)) = ?', [$civilStatus]);
-                }
+            ->when(!empty($civilStatus), function ($q) use ($civilStatus) {
+                $q->whereRaw('LOWER(TRIM(civilStatus)) = ?', [$civilStatus]);
             });
-        $query->whereHas('yUser', function ($sub) use (
-            $driver,
-            $youthType,
-        ) {
+
+        $query->whereHas('yUser', function ($sub) use ($youthType) {
             if (!empty($youthType)) {
-                $column = 'youthType';
-                if ($driver === 'sqlite') {
-                    $sub->whereRaw("LOWER(TRIM($column)) = LOWER(TRIM(?))", [$youthType]);
-                } else {
-                    $sub->whereRaw("LOWER(TRIM($column)) = ?", [$youthType]);
-                }
+                $sub->whereRaw('LOWER(TRIM(youthType)) = ?', [$youthType]);
             }
         });
+
         if ($typeId) {
             if ($validity === 'all') {
                 if ($cy != null) {
@@ -173,18 +156,12 @@ class YouthUserController extends Controller
                             intval($ageValue['max'])
                         ]);
                     } else {
-                        // Default qualified range
                         $q->whereBetween(DB::raw($ageExpression), [15, 30]);
                     }
                 }
             });
         }
-        $query->addSelect([
-            'is_validated' => DB::table('validated_youths')
-                ->selectRaw('COUNT(*) > 0')
-                ->whereColumn('validated_youths.youth_user_id', 'youth_infos.youth_user_id')
-                ->where('validated_youths.registration_cycle_id', $cid)
-        ]);
+
         // Handle sorting by age without selecting it
         if ($sortBy === 'age') {
             $query->orderByRaw("$ageExpression ASC");
@@ -192,14 +169,27 @@ class YouthUserController extends Controller
             $query->orderBy($sortBy, 'ASC');
         }
 
+        // Paginate first to avoid GROUP BY errors
         $results = $query->paginate($perPage)->appends($request->all());
+
+        // Load relationships and add is_validated after pagination
+        $results->getCollection()->load([
+            'yUser',
+            'yUser.educbg',
+            'yUser.civicInvolvement'
+        ])->transform(function ($info) use ($cid) {
+            $info->is_validated = DB::table('validated_youths')
+                ->where('youth_user_id', $info->youth_user_id)
+                ->where('registration_cycle_id', $cid)
+                ->exists();
+            return $info;
+        });
 
         $pass = $results->map(function ($info) {
             $arr = $info->toArray();
-
             $arr['is_validated'] = (bool) $info->is_validated;
             return [
-                'youthUser' => [$arr] // keep your original shape (array with one object)
+                'youthUser' => [$arr]
             ];
         });
 
