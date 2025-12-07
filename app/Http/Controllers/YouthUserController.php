@@ -959,8 +959,11 @@ class YouthUserController extends Controller
         $val = [];
         $fail = [];
         $nf = [];
+        $res = 200;
 
         foreach ($request->all() as $item) {
+                Log::info('56', ['idM' => $item['user']['idM']]);
+
             try {
 
                 // --- VALIDATE ---
@@ -1018,7 +1021,7 @@ class YouthUserController extends Controller
                     continue;
                 }
 
-                $youth->load('info', 'educbg', 'civicInvolvement');
+                $youth->load('info', 'educbg', 'civicInvolvement', 'validated');
                 $existingValidation = ValidateYouth::where('youth_user_id', $youth->id)
                     ->where('registration_cycle_id', $cycleID)
                     ->exists();
@@ -1079,16 +1082,16 @@ class YouthUserController extends Controller
                         $changed = true;
                     }
                 }
-                ValidateYouth::create([
-                    'youth_user_id' => $youth->id,
-                    'registration_cycle_id' => $cycleID,
-                ]);
+                $youth->validated()->update(['registration_cycle_id' => $cycleID]);
+                array_push($uv, $item['user']['idM']);
+
                 DB::commit();
-                array_push($ex, $item['user']['idM']);
+                $res = 200;
             } catch (\Throwable $e) {
-                DB::rollBack();
                 array_push($fail, $item['user']['idM']);
-                Log::info('error0909', $e->getMessage());
+                Log::info('error0909', ['exception' => $e->getMessage()]);
+                DB::rollBack();
+                $res = 400;
             }
         }
 
@@ -1099,7 +1102,7 @@ class YouthUserController extends Controller
             'fail' => $fail,
             'val' => $val,
             'message' => 'Bulk validation success.',
-        ]);
+        ],$res);
     }
 
 
