@@ -111,7 +111,7 @@ class XportExcel extends Controller
             $sheet->setCellValue('B1', $date);
         }
         $sheet->setCellValue('D1', 'From');
-        $sheet->setCellValue('E1', ($cycleID !== 'all' ?  $cycle->cycleName : 'All') . ' Cycle');
+        $sheet->setCellValue('E1', ($cycleID != 'all' ?  $cycle->cycleName : 'All') . ' Cycle');
         $sheet->setCellValue('A2', '#');
         $sheet->setCellValue('B2', 'Name');
         $sheet->setCellValue('C2', 'Age');

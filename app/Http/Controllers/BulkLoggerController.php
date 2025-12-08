@@ -9,17 +9,18 @@ use App\Models\User;
 use App\Models\YouthUser;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
 
 class BulkLoggerController extends Controller
 {
     public function bulkGetBatchContent(Request $request)
     {
-        //
         $cycleID = $request->input('cID', 'all');
 
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
         }
+
         $page = $request->input('page', 1);
         $user_id = $request->input('user_id');
         User::findOrFail($user_id);
@@ -28,19 +29,34 @@ class BulkLoggerController extends Controller
             return $page;
         });
 
-        $results = Bulk_logger::when($cycleID != 'all', function ($q) use ($cycleID) {
-            $q->whereHas('user.youthUser.validated', function ($qq) use ($cycleID) {
-                $qq->where('registration_cycle_id', $cycleID);
-            });
-        })->where('user_id', $user_id)->groupBy('batchNo')->paginate(10);
+        // Select batchNo and first id per batch to satisfy MySQL
+        $query = Bulk_logger::select('batchNo', DB::raw('MIN(id) as id'))
+            ->where('user_id', $user_id)
+            ->when($cycleID != 'all', function ($q) use ($cycleID) {
+                $q->whereHas('user.youthUser.validated', function ($qq) use ($cycleID) {
+                    $qq->where('registration_cycle_id', $cycleID);
+                });
+            })
+            ->groupBy('batchNo');
+
+        $results = $query->paginate(10);
+
+        // Fetch the full records for these IDs
+        $fullRecords = Bulk_logger::whereIn(
+            'id',
+            $results->pluck('id')->toArray()
+        )->get();
+
         return response()->json([
-            'data' => $results->items(),
+            'data' => $fullRecords, // full records like select *
             'pagination' => [
                 'current_page' => $results->currentPage(),
                 'last_pages' => $results->lastPage(),
             ]
         ]);
     }
+
+
     public function bulkGetUser(Request $request)
     {
         $cycleID = $this->getCycle();
@@ -79,26 +95,33 @@ class BulkLoggerController extends Controller
         if (!$cycleID) {
             return response()->json(['error' => 'No active cycle.'], 400);
         }
+
         $page = $request->input('page', 1);
         $batchNo = $request->input('batchNo');
 
         Paginator::currentPageResolver(function () use ($page) {
             return $page;
         });
-        $results = YouthUser::where('registration_cycle_id', $cycleID)
-            ->where('batchNo', $batchNo)->with([
-                'info',
-            ])->paginate(10);
+
+        // Filter YouthUser through the validated relationship
+        $results = YouthUser::whereHas('validated', function ($q) use ($cycleID) {
+            $q->where('registration_cycle_id', $cycleID);
+        })
+            ->where('batchNo', $batchNo)
+            ->with('info')
+            ->paginate(10);
+
         $res = $results->items();
-        $data = [];
         $full = [];
+
         foreach ($res as $d) {
-            $data['fname'] = $d['info']['fname'];
-            $data['mname'] = $d['info']['mname'];
-            $data['lname'] = $d['info']['lname'];
-            $data['batchNo'] = $d['batchNo'];
+            $data = [
+                'fname' => $d->info->fname,
+                'mname' => $d->info->mname,
+                'lname' => $d->info->lname,
+                'batchNo' => $d->batchNo,
+            ];
             $full[] = $data;
-            $data = [];
         }
 
         return response()->json([
@@ -109,6 +132,7 @@ class BulkLoggerController extends Controller
             ]
         ]);
     }
+
     public function getCycle()
     {
         $res = RegistrationCycle::where('cycleStatus', 'active')->first();

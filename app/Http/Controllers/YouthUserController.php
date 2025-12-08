@@ -670,15 +670,16 @@ class YouthUserController extends Controller
                     'registration_cycle_id' => $cycleID,
                 ]);
             }
+            // Bulk_logger::where
 
             // DB::rollBack();
-            DB::commit();
             if (count($regs) > 0) {
                 Bulk_logger::create([
                     'user_id' => $uuid,
                     'batchNo' => $batchNo,
                 ]);
             }
+            DB::commit();
         } catch (\Throwable $th) {
             Log::info("inserting error: " . $th->getMessage());
             DB::rollBack();
