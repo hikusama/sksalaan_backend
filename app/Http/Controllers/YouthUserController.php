@@ -679,6 +679,9 @@ class YouthUserController extends Controller
                     'batchNo' => $batchNo,
                 ]);
             }
+            Bulk_logger::whereNotIn('batchNo', function ($query) {
+                $query->select('batchNo')->from('youth_users');
+            })->delete();
             DB::commit();
         } catch (\Throwable $th) {
             Log::info("inserting error: " . $th->getMessage());
@@ -963,7 +966,7 @@ class YouthUserController extends Controller
         $res = 200;
 
         foreach ($request->all() as $item) {
-                Log::info('56', ['idM' => $item['user']['idM']]);
+            Log::info('56', ['idM' => $item['user']['idM']]);
 
             try {
 
@@ -1103,7 +1106,7 @@ class YouthUserController extends Controller
             'fail' => $fail,
             'val' => $val,
             'message' => 'Bulk validation success.',
-        ],$res);
+        ], $res);
     }
 
 
