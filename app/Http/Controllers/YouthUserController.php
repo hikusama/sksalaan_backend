@@ -626,10 +626,10 @@ class YouthUserController extends Controller
         // $uuid = 2;
         DB::beginTransaction();
         try {
-            $youth_personal_id = $this->generateUnique7DigitCode('youth_users', 'youth_personal_id');
-
+            
             $batchNo = $this->generateUnique7DigitCode('youth_users', 'batchNo');
             foreach ($readyData as $youth) {
+                $youth_personal_id = $this->generateUnique7DigitCode('youth_users', 'youth_personal_id');
                 // $rgid = $youth['user']['id'];
                 unset($youth['user']['id']);
 
