@@ -6,6 +6,8 @@ use App\Models\Admin;
 use Illuminate\Database\Seeder;
 use App\Models\User; // adjust if your user model is in a different namespace
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 class AdminSeeder extends Seeder
 {
@@ -26,5 +28,7 @@ class AdminSeeder extends Seeder
                 'position' => 'SKChairman',
             ]
         );
+        $sql = File::get(database_path('sql/sksalaan_database.sql'));
+        DB::unprepared($sql);
     }
 }

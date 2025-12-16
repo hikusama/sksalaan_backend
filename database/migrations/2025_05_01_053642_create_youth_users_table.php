@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('youth_users', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->integer('batchNo', 7);
+            $table->integer('batchNo');
             $table->string('duplicationScan')->nullable();
-            $table->string('youth_personal_id', 7)->unique();
+            $table->string('youth_personal_id')->unique();
             $table->string('youthType');
             $table->string('skills');
             $table->timestamps();
